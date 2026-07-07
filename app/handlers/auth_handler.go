@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"motrava/app/middleware"
 	"motrava/core/dto"
 	"motrava/core/port/usecase"
 	"motrava/core/utils/response"
@@ -92,14 +93,9 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Me(c *fiber.Ctx) error {
-	accessToken := bearerToken(c.Get("Authorization"))
-	if accessToken == "" {
-		return response.ValidationError(c, fiber.Map{"authorization": "bearer token is required"})
-	}
-
-	user, err := h.authUsecase.Me(c.Context(), accessToken)
-	if err != nil {
-		return h.handleAuthError(c, err, "fetch current user failed")
+	user, ok := middleware.CurrentUser(c)
+	if !ok || user == nil {
+		return response.Error(c, fiber.StatusUnauthorized, "unauthorized", nil)
 	}
 
 	return response.OK(c, "current user fetched", user)
@@ -193,17 +189,4 @@ func generateState() (string, error) {
 	}
 
 	return base64.RawURLEncoding.EncodeToString(buffer), nil
-}
-
-func bearerToken(header string) string {
-	parts := strings.Fields(header)
-	if len(parts) != 2 {
-		return ""
-	}
-
-	if strings.ToLower(parts[0]) != "bearer" {
-		return ""
-	}
-
-	return strings.TrimSpace(parts[1])
 }

@@ -6,6 +6,8 @@
 │   ├── handlers
 │   │   ├── auth_handler.go
 │   │   └── user_handler.go
+│   ├── middleware
+│   │   └── auth.go
 │   └── routes
 │       └── routes.go
 ├── cmd
@@ -51,4 +53,4 @@
     ├── build-errors.log
     └── main
 
-21 directories, 31 files
+22 directories, 32 files

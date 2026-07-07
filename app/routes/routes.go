@@ -10,7 +10,7 @@ import (
 	"motrava/core/utils/response"
 )
 
-func Register(app *fiber.App, logger *slog.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
+func Register(app *fiber.App, logger *slog.Logger, authMiddleware fiber.Handler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
@@ -25,6 +25,7 @@ func Register(app *fiber.App, logger *slog.Logger, userHandler *handlers.UserHan
 	})
 
 	api := app.Group("/api")
+	private := api.Group("", authMiddleware)
 
 	api.Get("/health", func(c *fiber.Ctx) error {
 		logger.Info("health endpoint called", "module", "routes")
@@ -33,15 +34,15 @@ func Register(app *fiber.App, logger *slog.Logger, userHandler *handlers.UserHan
 		})
 	})
 
-	api.Get("/users", userHandler.ListUsers)
-	api.Get("/users/:id", userHandler.GetUserByID)
-	api.Post("/users", userHandler.CreateUser)
+	private.Get("/users", userHandler.ListUsers)
+	private.Get("/users/:id", userHandler.GetUserByID)
+	private.Post("/users", userHandler.CreateUser)
 
 	auth := api.Group("/auth")
 	auth.Post("/register", authHandler.Register)
 	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh", authHandler.Refresh)
-	auth.Get("/me", authHandler.Me)
+	auth.Get("/me", authMiddleware, authHandler.Me)
 	auth.Get("/google/login", authHandler.GoogleLogin)
 	auth.Get("/google/callback", authHandler.GoogleCallback)
 	auth.Post("/google/mobile", authHandler.GoogleMobileLogin)
