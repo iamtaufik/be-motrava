@@ -1,0 +1,51 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"motrava/app"
+	"motrava/config"
+	"motrava/infra/logger"
+)
+
+func main() {
+	cfg := config.Load()
+	appLogger, logFile, err := logger.NewJSONFileLogger(cfg.LogFile)
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize logger: %w", err))
+	}
+	defer logFile.Close()
+
+	application, err := app.New(cfg, appLogger)
+	if err != nil {
+		appLogger.Error("failed to initialize app", "error", err)
+		os.Exit(1)
+	}
+
+	appLogger.Info("application initialized", "module", "main")
+
+	go func() {
+		if err := application.Run(); err != nil {
+			appLogger.Error("server stopped with error", "error", err, "module", "main")
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := application.Shutdown(ctx); err != nil {
+		appLogger.Error("graceful shutdown failed", "error", err, "module", "main")
+	}
+
+	appLogger.Info("application shutdown complete", "module", "main")
+}

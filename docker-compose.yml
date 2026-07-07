@@ -1,0 +1,13 @@
+services:
+  be-motrava:
+    build: .
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./.env
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    external: true

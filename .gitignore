@@ -1,0 +1,30 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+log.json
+*.log
+
+# Go build outputs
+bin/
+build/
+dist/
+*.exe
+*.out
+*.test
+
+# Coverage
+coverage.out
+*.coverprofile
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Dependency / cache
+vendor/
+.air.toml
