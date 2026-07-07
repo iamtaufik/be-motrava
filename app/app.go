@@ -36,9 +36,10 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 
 	fiberApp := fiber.New()
 	userRepository := infraRepo.NewUserRepositoryGorm(db, logger)
+	refreshTokenRepository := infraRepo.NewRefreshTokenRepositoryGorm(db, logger)
 	userUsecase := usecase.NewUserUsecase(userRepository)
 	userHandler := handlers.NewUserHandler(userUsecase, logger)
-	authUsecase := usecase.NewGoogleAuthUsecase(cfg, userRepository, logger)
+	authUsecase := usecase.NewAuthUsecase(cfg, userRepository, refreshTokenRepository, logger)
 	authHandler := handlers.NewAuthHandler(authUsecase, logger)
 
 	routes.Register(fiberApp, logger, userHandler, authHandler)

@@ -38,6 +38,10 @@ func Register(app *fiber.App, logger *slog.Logger, userHandler *handlers.UserHan
 	api.Post("/users", userHandler.CreateUser)
 
 	auth := api.Group("/auth")
+	auth.Post("/register", authHandler.Register)
+	auth.Post("/login", authHandler.Login)
+	auth.Post("/refresh", authHandler.Refresh)
+	auth.Get("/me", authHandler.Me)
 	auth.Get("/google/login", authHandler.GoogleLogin)
 	auth.Get("/google/callback", authHandler.GoogleCallback)
 	auth.Post("/google/mobile", authHandler.GoogleMobileLogin)

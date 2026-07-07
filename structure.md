@@ -1,4 +1,6 @@
 .
+├── Dockerfile
+├── Jenkinsfile
 ├── app
 │   ├── app.go
 │   ├── handlers
@@ -13,15 +15,18 @@
 │   └── config.go
 ├── core
 │   ├── dto
+│   │   ├── auth_dto.go
 │   │   ├── google_auth_dto.go
 │   │   └── user_dto.go
 │   ├── models
+│   │   ├── refresh_token.go
 │   │   └── user.go
 │   ├── port
 │   │   └── usecase
 │   │       ├── auth_usecase.go
 │   │       └── user_usecase.go
 │   ├── repository
+│   │   ├── refresh_token_repository.go
 │   │   └── user_repository.go
 │   ├── usecase
 │   │   ├── auth_usecase.go
@@ -29,6 +34,7 @@
 │   └── utils
 │       └── response
 │           └── response.go
+├── docker-compose.yml
 ├── go.mod
 ├── go.sum
 ├── infra
@@ -37,8 +43,12 @@
 │   ├── logger
 │   │   └── json.go
 │   └── repository
+│       ├── refresh_token_repository_gorm.go
 │       └── user_repository_gorm.go
 ├── log.json
-└── structure.md
+├── structure.md
+└── tmp
+    ├── build-errors.log
+    └── main
 
-20 directories, 22 files
+21 directories, 31 files
