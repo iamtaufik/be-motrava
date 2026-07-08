@@ -34,14 +34,19 @@ func NewRoutes(app *fiber.App, logger *slog.Logger, handlers Handlers, authMiddl
 func (r *Router) SetupRouters() {
 	r.app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
+		body := c.Body()
 		err := c.Next()
-		r.logger.Info("http request",
+		attrs := []any{
 			"module", "routes",
 			"method", c.Method(),
 			"path", c.Path(),
 			"status", c.Response().StatusCode(),
 			"latency_ms", time.Since(start).Milliseconds(),
-		)
+		}
+		if len(body) > 0 {
+			attrs = append(attrs, "body", string(body))
+		}
+		r.logger.Info("http request", attrs...)
 		return err
 	})
 
