@@ -9,14 +9,26 @@ import (
 	"gorm.io/gorm"
 
 	"motrava/app/handlers"
+	"motrava/app/middleware"
 	"motrava/app/routes"
 	"motrava/config"
+	"motrava/core/repository"
 	"motrava/core/usecase"
+	portUsecase "motrava/core/port/usecase"
 	"motrava/infra/database"
 	infraRepo "motrava/infra/repository"
 )
 
-// Application holds app-level dependencies.
+type repositories struct {
+	userRepo         repository.UserRepository
+	refreshTokenRepo repository.RefreshTokenRepository
+}
+
+type usecases struct {
+	authUsecase portUsecase.AuthUsecase
+	userUsecase portUsecase.UserUsecase
+}
+
 type Application struct {
 	fiber *fiber.App
 	db    *gorm.DB
@@ -30,19 +42,16 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		return nil, fmt.Errorf("connect database: %w", err)
 	}
 
-	// if err := database.AutoMigrate(db, logger); err != nil {
-	// 	return nil, fmt.Errorf("automigrate models: %w", err)
-	// }
-
 	fiberApp := fiber.New()
-	userRepository := infraRepo.NewUserRepositoryGorm(db, logger)
-	refreshTokenRepository := infraRepo.NewRefreshTokenRepositoryGorm(db, logger)
-	userUsecase := usecase.NewUserUsecase(userRepository)
-	userHandler := handlers.NewUserHandler(userUsecase, logger)
-	authUsecase := usecase.NewAuthUsecase(cfg, userRepository, refreshTokenRepository, logger)
-	authHandler := handlers.NewAuthHandler(authUsecase, logger)
+	repos := newRepositories(db, logger)
+	usecases := newUsecases(cfg, repos, logger)
+	authMiddleware := middleware.AuthMiddleware(cfg, repos.userRepo, logger)
 
-	routes.Register(fiberApp, logger, cfg, userRepository, userHandler, authHandler)
+	routes.NewRoutes(fiberApp, logger, routes.Handlers{
+		AuthHandler: handlers.NewAuthHandler(usecases.authUsecase, logger),
+		UserHandler: handlers.NewUserHandler(usecases.userUsecase, logger),
+	}, authMiddleware).SetupRouters()
+
 	logger.Info("application modules wired", "module", "app")
 
 	return &Application{
@@ -51,6 +60,20 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		cfg:   cfg,
 		log:   logger,
 	}, nil
+}
+
+func newRepositories(db *gorm.DB, logger *slog.Logger) *repositories {
+	return &repositories{
+		userRepo:         infraRepo.NewUserRepositoryGorm(db, logger),
+		refreshTokenRepo: infraRepo.NewRefreshTokenRepositoryGorm(db, logger),
+	}
+}
+
+func newUsecases(cfg config.Config, repos *repositories, logger *slog.Logger) *usecases {
+	return &usecases{
+		authUsecase: usecase.NewAuthUsecase(cfg, repos.userRepo, repos.refreshTokenRepo, logger),
+		userUsecase: usecase.NewUserUsecase(repos.userRepo),
+	}
 }
 
 func (a *Application) Run() error {

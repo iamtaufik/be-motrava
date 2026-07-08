@@ -7,18 +7,35 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"motrava/app/handlers"
-	"motrava/app/middleware"
-	"motrava/config"
-	"motrava/core/repository"
 	"motrava/core/utils/response"
 )
 
-func Register(app *fiber.App, logger *slog.Logger, cfg config.Config, userRepo repository.UserRepository, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
-	authMiddleware := middleware.AuthMiddleware(cfg, userRepo, logger)
-	app.Use(func(c *fiber.Ctx) error {
+type Handlers struct {
+	AuthHandler *handlers.AuthHandler
+	UserHandler *handlers.UserHandler
+}
+
+type Router struct {
+	app            *fiber.App
+	logger         *slog.Logger
+	handlers       Handlers
+	authMiddleware fiber.Handler
+}
+
+func NewRoutes(app *fiber.App, logger *slog.Logger, handlers Handlers, authMiddleware fiber.Handler) *Router {
+	return &Router{
+		app:            app,
+		logger:         logger,
+		handlers:       handlers,
+		authMiddleware: authMiddleware,
+	}
+}
+
+func (r *Router) SetupRouters() {
+	r.app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()
-		logger.Info("http request",
+		r.logger.Info("http request",
 			"module", "routes",
 			"method", c.Method(),
 			"path", c.Path(),
@@ -28,26 +45,21 @@ func Register(app *fiber.App, logger *slog.Logger, cfg config.Config, userRepo r
 		return err
 	})
 
-	api := app.Group("/api")
-	private := api.Group("", authMiddleware)
+	api := r.app.Group("/api")
 
 	api.Get("/health", func(c *fiber.Ctx) error {
-		logger.Info("health endpoint called", "module", "routes")
+		r.logger.Info("health endpoint called", "module", "routes")
 		return response.OK(c, "health check success", fiber.Map{
 			"status": "ok",
 		})
 	})
 
-	private.Get("/users", userHandler.ListUsers)
-	private.Get("/users/:id", userHandler.GetUserByID)
-	private.Post("/users", userHandler.CreateUser)
-
 	auth := api.Group("/auth")
-	auth.Post("/register", authHandler.Register)
-	auth.Post("/login", authHandler.Login)
-	auth.Post("/refresh", authHandler.Refresh)
-	auth.Get("/me", authMiddleware, authHandler.Me)
-	auth.Get("/google/login", authHandler.GoogleLogin)
-	auth.Get("/google/callback", authHandler.GoogleCallback)
-	auth.Post("/google/mobile", authHandler.GoogleMobileLogin)
+	auth.Post("/register", r.handlers.AuthHandler.Register)
+	auth.Post("/login", r.handlers.AuthHandler.Login)
+	auth.Post("/refresh", r.handlers.AuthHandler.Refresh)
+	auth.Get("/me", r.authMiddleware, r.handlers.AuthHandler.Me)
+	auth.Get("/google/login", r.handlers.AuthHandler.GoogleLogin)
+	auth.Get("/google/callback", r.handlers.AuthHandler.GoogleCallback)
+	auth.Post("/google/mobile", r.handlers.AuthHandler.GoogleMobileLogin)
 }
