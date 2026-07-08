@@ -62,8 +62,8 @@ func NewAuthRequired(cfg config.Config, userRepo repository.UserRepository, logg
 	}
 }
 
-// ValidateToken is an alias for NewAuthRequired for route-level wiring.
-func ValidateToken(cfg config.Config, userRepo repository.UserRepository, logger *slog.Logger) fiber.Handler {
+// AuthMiddleware is an alias for NewAuthRequired for route-level wiring.
+func AuthMiddleware(cfg config.Config, userRepo repository.UserRepository, logger *slog.Logger) fiber.Handler {
 	return NewAuthRequired(cfg, userRepo, logger)
 }
 

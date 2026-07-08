@@ -7,10 +7,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"motrava/app/handlers"
+	"motrava/app/middleware"
+	"motrava/config"
+	"motrava/core/repository"
 	"motrava/core/utils/response"
 )
 
-func Register(app *fiber.App, logger *slog.Logger, authMiddleware fiber.Handler, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
+func Register(app *fiber.App, logger *slog.Logger, cfg config.Config, userRepo repository.UserRepository, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
+	authMiddleware := middleware.AuthMiddleware(cfg, userRepo, logger)
 	app.Use(func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()

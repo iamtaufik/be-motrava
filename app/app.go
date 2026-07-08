@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"motrava/app/handlers"
-	"motrava/app/middleware"
 	"motrava/app/routes"
 	"motrava/config"
 	"motrava/core/usecase"
@@ -38,13 +37,12 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 	fiberApp := fiber.New()
 	userRepository := infraRepo.NewUserRepositoryGorm(db, logger)
 	refreshTokenRepository := infraRepo.NewRefreshTokenRepositoryGorm(db, logger)
-	authMiddleware := middleware.ValidateToken(cfg, userRepository, logger)
 	userUsecase := usecase.NewUserUsecase(userRepository)
 	userHandler := handlers.NewUserHandler(userUsecase, logger)
 	authUsecase := usecase.NewAuthUsecase(cfg, userRepository, refreshTokenRepository, logger)
 	authHandler := handlers.NewAuthHandler(authUsecase, logger)
 
-	routes.Register(fiberApp, logger, authMiddleware, userHandler, authHandler)
+	routes.Register(fiberApp, logger, cfg, userRepository, userHandler, authHandler)
 	logger.Info("application modules wired", "module", "app")
 
 	return &Application{
