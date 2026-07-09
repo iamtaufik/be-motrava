@@ -30,6 +30,7 @@ type Trip struct {
 	IdleTime       int            `gorm:"not null;default:0" json:"idle_time"`
 	AverageSpeed   float64        `gorm:"not null;default:0" json:"average_speed"`
 	MaximumSpeed   float64        `gorm:"not null;default:0" json:"maximum_speed"`
+	FuelConsumed   *float64       `gorm:"type:double precision" json:"fuel_consumed,omitempty"`
 	Status         string         `gorm:"size:20;not null;default:ONGOING" json:"status"`
 	CreatedAt      time.Time      `gorm:"not null;autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time      `gorm:"not null;autoUpdateTime" json:"updated_at"`

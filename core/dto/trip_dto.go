@@ -24,6 +24,7 @@ type TripResponse struct {
 	IdleTime       int        `json:"idle_time"`
 	AverageSpeed   float64    `json:"average_speed"`
 	MaximumSpeed   float64    `json:"maximum_speed"`
+	FuelConsumed   *float64   `json:"fuel_consumed,omitempty"`
 	Status         string     `json:"status"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
@@ -51,6 +52,7 @@ type TripHistoryItem struct {
 	IdleTime      int        `json:"idle_time"`
 	AverageSpeed  float64    `json:"average_speed"`
 	MaximumSpeed  float64    `json:"maximum_speed"`
+	FuelConsumed  *float64   `json:"fuel_consumed,omitempty"`
 	Status        string     `json:"status"`
 	CreatedAt     time.Time  `json:"created_at"`
 }

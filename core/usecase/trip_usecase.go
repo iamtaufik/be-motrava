@@ -126,6 +126,7 @@ func (u *tripUsecase) GetTripHistory(userID string, req dto.TripHistoryRequest) 
 			IdleTime:      t.IdleTime,
 			AverageSpeed:  t.AverageSpeed,
 			MaximumSpeed:  t.MaximumSpeed,
+			FuelConsumed:  t.FuelConsumed,
 			Status:        t.Status,
 			CreatedAt:     t.CreatedAt,
 		}
@@ -237,6 +238,17 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 		trip.AverageSpeed = math.Round(avgSpeed*100) / 100
 	}
 
+	// Calculate estimated fuel consumed
+	if trip.TotalDistance > 0 {
+		vehicle, err := u.vehicleRepo.FindByIDAndUserID(trip.VehicleID, uid)
+		if err == nil && vehicle != nil && vehicle.FuelEfficiencyKmPerLiter != nil && *vehicle.FuelEfficiencyKmPerLiter > 0 {
+			distanceKm := trip.TotalDistance / 1000.0
+			consumed := distanceKm / *vehicle.FuelEfficiencyKmPerLiter
+			consumed = math.Round(consumed*100) / 100
+			trip.FuelConsumed = &consumed
+		}
+	}
+
 	trip.MaximumSpeed = math.Round(trip.MaximumSpeed*100) / 100
 	trip.TotalDistance = math.Round(trip.TotalDistance*100) / 100
 	trip.Status = models.TripStatusCompleted
@@ -268,6 +280,7 @@ func toTripResponse(t models.Trip) dto.TripResponse {
 		IdleTime:       t.IdleTime,
 		AverageSpeed:   t.AverageSpeed,
 		MaximumSpeed:   t.MaximumSpeed,
+		FuelConsumed:   t.FuelConsumed,
 		Status:         t.Status,
 		CreatedAt:      t.CreatedAt,
 		UpdatedAt:      t.UpdatedAt,

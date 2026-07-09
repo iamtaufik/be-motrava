@@ -22,9 +22,10 @@ type Vehicle struct {
 	Brand       string         `gorm:"size:100;not null" json:"brand"`
 	Model       string         `gorm:"size:100;not null" json:"model"`
 	VehicleType string         `gorm:"size:20;not null;default:CAR" json:"vehicle_type"`
-	Color       string         `gorm:"size:50;not null" json:"color"`
-	Year        *int           `json:"year,omitempty"`
-	Photo       *string        `gorm:"type:text" json:"photo,omitempty"`
+	Color                   string         `gorm:"size:50;not null" json:"color"`
+	Year                    *int           `json:"year,omitempty"`
+	Photo                   *string        `gorm:"type:text" json:"photo,omitempty"`
+	FuelEfficiencyKmPerLiter *float64       `gorm:"type:double precision" json:"fuel_efficiency_km_per_liter,omitempty"`
 	IsDefault   bool           `gorm:"not null;default:false" json:"is_default"`
 	CreatedAt   time.Time      `gorm:"not null;autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"not null;autoUpdateTime" json:"updated_at"`

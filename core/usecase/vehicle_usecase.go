@@ -76,16 +76,17 @@ func (u *vehicleUsecase) CreateVehicle(userID string, input dto.CreateVehicleReq
 	}
 
 	vehicle := models.Vehicle{
-		ID:          uuid.New(),
-		UserID:      uid,
-		VehicleName: strings.TrimSpace(input.VehicleName),
-		PlateNumber: strings.TrimSpace(input.PlateNumber),
-		Brand:       strings.TrimSpace(input.Brand),
-		Model:       strings.TrimSpace(input.Model),
-		VehicleType: vehicleType,
-		Color:       strings.TrimSpace(input.Color),
-		Year:        input.Year,
-		IsDefault:   false,
+		ID:                      uuid.New(),
+		UserID:                  uid,
+		VehicleName:             strings.TrimSpace(input.VehicleName),
+		PlateNumber:             strings.TrimSpace(input.PlateNumber),
+		Brand:                   strings.TrimSpace(input.Brand),
+		Model:                   strings.TrimSpace(input.Model),
+		VehicleType:             vehicleType,
+		Color:                   strings.TrimSpace(input.Color),
+		Year:                    input.Year,
+		FuelEfficiencyKmPerLiter: input.FuelEfficiencyKmPerLiter,
+		IsDefault:               false,
 	}
 
 	if photo := strings.TrimSpace(input.Photo); photo != "" {
@@ -153,6 +154,9 @@ func (u *vehicleUsecase) UpdateVehicle(id string, userID string, input dto.Updat
 			vehicle.Photo = &photo
 		}
 	}
+	if input.FuelEfficiencyKmPerLiter != nil {
+		vehicle.FuelEfficiencyKmPerLiter = input.FuelEfficiencyKmPerLiter
+	}
 
 	if err := u.vehicleRepo.Save(vehicle); err != nil {
 		return nil, err
@@ -218,18 +222,19 @@ func (u *vehicleUsecase) SetDefaultVehicle(id string, userID string) (*dto.Vehic
 
 func toVehicleResponse(v models.Vehicle) dto.VehicleResponse {
 	return dto.VehicleResponse{
-		ID:          v.ID.String(),
-		UserID:      v.UserID.String(),
-		VehicleName: v.VehicleName,
-		PlateNumber: v.PlateNumber,
-		Brand:       v.Brand,
-		Model:       v.Model,
-		VehicleType: v.VehicleType,
-		Color:       v.Color,
-		Year:        v.Year,
-		Photo:       v.Photo,
-		IsDefault:   v.IsDefault,
-		CreatedAt:   v.CreatedAt,
-		UpdatedAt:   v.UpdatedAt,
+		ID:                       v.ID.String(),
+		UserID:                   v.UserID.String(),
+		VehicleName:              v.VehicleName,
+		PlateNumber:              v.PlateNumber,
+		Brand:                    v.Brand,
+		Model:                    v.Model,
+		VehicleType:              v.VehicleType,
+		Color:                    v.Color,
+		Year:                     v.Year,
+		Photo:                    v.Photo,
+		IsDefault:                v.IsDefault,
+		FuelEfficiencyKmPerLiter: v.FuelEfficiencyKmPerLiter,
+		CreatedAt:                v.CreatedAt,
+		UpdatedAt:                v.UpdatedAt,
 	}
 }
