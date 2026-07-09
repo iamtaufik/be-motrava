@@ -107,9 +107,30 @@ func (h *WSHandler) handleConnection(conn *websocket.Conn, userID uuid.UUID) {
 				}
 			}()
 
-		case "location":
+		case "end_trip":
+			if tripID == "" {
+				continue
+			}
+			if _, err := h.tripUsecase.EndTrip(userID.String(), tripID); err != nil {
+				h.log.Error("ws end trip failed", "module", "ws_handler", "error", err)
+			}
+			conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"trip_ended","trip_id":"`+tripID+`"}`))
+			return
+
+		default:
 			if tripID == "" || client == nil {
 				continue
+			}
+
+			_, hasLat := raw["latitude"].(float64)
+			_, hasLon := raw["longitude"].(float64)
+			if !hasLat || !hasLon {
+				continue
+			}
+
+			tid, ok := raw["trip_id"].(string)
+			if ok && tid != "" {
+				tripID = tid
 			}
 
 			payload, ok := h.parseLocationPayload(raw)
@@ -141,16 +162,6 @@ func (h *WSHandler) handleConnection(conn *websocket.Conn, userID uuid.UUID) {
 			h.hub.UpdateLastPoint(tripID, tripPoint)
 
 			h.hub.HandlePosition(payload, payload.Speed)
-
-		case "end_trip":
-			if tripID == "" {
-				continue
-			}
-			if _, err := h.tripUsecase.EndTrip(userID.String(), tripID); err != nil {
-				h.log.Error("ws end trip failed", "module", "ws_handler", "error", err)
-			}
-			conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"trip_ended","trip_id":"`+tripID+`"}`))
-			return
 		}
 	}
 }
