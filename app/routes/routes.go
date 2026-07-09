@@ -80,6 +80,7 @@ func (r *Router) SetupRouters() {
 	vehicle.Put("/:id/default", r.handlers.VehicleHandler.SetDefaultVehicle)
 
 	trip := api.Group("/trips", r.authMiddleware)
+	trip.Get("/", r.handlers.TripHandler.GetTripHistory)
 	trip.Post("/start", r.handlers.TripHandler.StartTrip)
 	trip.Post("/:id/end", r.handlers.TripHandler.EndTrip)
 

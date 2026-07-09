@@ -9,6 +9,7 @@ import (
 type TripRepository interface {
 	FindByID(id uuid.UUID) (*models.Trip, error)
 	FindOngoingByUserID(userID uuid.UUID) (*models.Trip, error)
+	FindByUserID(userID uuid.UUID, page, limit int, search, dateFrom, dateTo string) ([]models.Trip, int64, error)
 	Create(trip *models.Trip) error
 	Save(trip *models.Trip) error
 }

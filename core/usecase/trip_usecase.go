@@ -78,6 +78,69 @@ func (u *tripUsecase) StartTrip(userID string, input dto.StartTripRequest) (*dto
 	return &res, nil
 }
 
+func (u *tripUsecase) GetTripHistory(userID string, req dto.TripHistoryRequest) ([]dto.TripHistoryItem, *dto.PaginationMeta, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid user id: %w", err)
+	}
+
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	limit := req.Limit
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	trips, total, err := u.tripRepo.FindByUserID(uid, page, limit, req.Search, req.DateFrom, req.DateTo)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	totalPages := int(total) / limit
+	if int(total)%limit != 0 {
+		totalPages++
+	}
+
+	items := make([]dto.TripHistoryItem, len(trips))
+	for i, t := range trips {
+		vehicleName := ""
+		plateNumber := ""
+		if t.Vehicle.VehicleName != "" {
+			vehicleName = t.Vehicle.VehicleName
+			plateNumber = t.Vehicle.PlateNumber
+		}
+
+		items[i] = dto.TripHistoryItem{
+			ID:            t.ID.String(),
+			VehicleName:   vehicleName,
+			PlateNumber:   plateNumber,
+			StartTime:     t.StartTime,
+			EndTime:       t.EndTime,
+			StartAddress:  t.StartAddress,
+			EndAddress:    t.EndAddress,
+			TotalDistance: t.TotalDistance,
+			Duration:      t.Duration,
+			MovingTime:    t.MovingTime,
+			IdleTime:      t.IdleTime,
+			AverageSpeed:  t.AverageSpeed,
+			MaximumSpeed:  t.MaximumSpeed,
+			Status:        t.Status,
+			CreatedAt:     t.CreatedAt,
+		}
+	}
+
+	meta := &dto.PaginationMeta{
+		Page:       page,
+		Limit:      limit,
+		TotalItems: total,
+		TotalPages: totalPages,
+	}
+
+	return items, meta, nil
+}
+
 func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models.TripPoint, speed float64) error {
 	uid, err := uuid.Parse(userID)
 	if err != nil {

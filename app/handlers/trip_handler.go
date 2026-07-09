@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -79,4 +80,35 @@ func (h *TripHandler) EndTrip(c *fiber.Ctx) error {
 	}
 
 	return response.OK(c, "trip completed", trip)
+}
+
+func (h *TripHandler) GetTripHistory(c *fiber.Ctx) error {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return response.Error(c, fiber.StatusUnauthorized, "unauthorized", nil)
+	}
+
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+
+	req := dto.TripHistoryRequest{
+		Page:     page,
+		Limit:    limit,
+		Search:   c.Query("search"),
+		DateFrom: c.Query("date_from"),
+		DateTo:   c.Query("date_to"),
+	}
+
+	trips, meta, err := h.tripUsecase.GetTripHistory(user.ID.String(), req)
+	if err != nil {
+		h.log.Error("get trip history failed", "module", "trip_handler", "error", err)
+		return response.Error(c, fiber.StatusInternalServerError, "failed to get trip history", nil)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.APIResponse{
+		Success: true,
+		Message: "trip history retrieved",
+		Data:    trips,
+		Meta:    meta,
+	})
 }

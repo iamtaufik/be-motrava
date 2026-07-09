@@ -33,6 +33,7 @@ CREATE TABLE "M_TRIP" (
 
 CREATE INDEX "idx_M_TRIP_user_id" ON "M_TRIP"("user_id");
 CREATE INDEX "idx_M_TRIP_status" ON "M_TRIP"("status");
+CREATE INDEX "idx_M_TRIP_start_time" ON "M_TRIP"("start_time");
 CREATE INDEX "idx_M_TRIP_deleted_at" ON "M_TRIP"("deleted_at");
 
 -- M_TRIP_POINT: menyimpan titik GPS selama perjalanan

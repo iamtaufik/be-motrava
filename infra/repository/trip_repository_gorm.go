@@ -45,6 +45,36 @@ func (r *tripRepositoryGorm) Create(trip *models.Trip) error {
 	return nil
 }
 
+func (r *tripRepositoryGorm) FindByUserID(userID uuid.UUID, page, limit int, search, dateFrom, dateTo string) ([]models.Trip, int64, error) {
+	var trips []models.Trip
+	query := r.db.Model(&models.Trip{}).Where("user_id = ?", userID)
+
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("start_address ILIKE ? OR end_address ILIKE ?", like, like)
+	}
+	if dateFrom != "" {
+		query = query.Where("start_time >= ?", dateFrom)
+	}
+	if dateTo != "" {
+		query = query.Where("start_time <= ?", dateTo+" 23:59:59")
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		r.log.Error("failed to count trips", "module", "trip_repository", "error", err)
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Order("start_time desc").Preload("Vehicle").Find(&trips).Error; err != nil {
+		r.log.Error("failed to query trips by user", "module", "trip_repository", "error", err)
+		return nil, 0, err
+	}
+
+	return trips, total, nil
+}
+
 func (r *tripRepositoryGorm) Save(trip *models.Trip) error {
 	if err := r.db.Save(trip).Error; err != nil {
 		r.log.Error("failed to save trip", "module", "trip_repository", "error", err, "trip_id", trip.ID)

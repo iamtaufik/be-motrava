@@ -1,0 +1,227 @@
+{
+  "info": {
+    "name": "Motrava - Trip History",
+    "description": "Collection for Trip History endpoint\n\n## Setup\n\n1. Set variable `base_url` (default: http://localhost:8080)\n2. Run **Login** to auto-set `access_token`\n3. Use **Get Trip History** with various query params",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "motrava"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', json.data.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": "user@example.com",\n  "password": "password123"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trip History",
+      "item": [
+        {
+          "name": "Get Trip History - Default",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"]
+            }
+          }
+        },
+        {
+          "name": "Get Trip History - Page 2",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips?page=2&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trip History - Search Address",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips?search=Home",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Home"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trip History - Filter by Date",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips?date_from=2026-07-01&date_to=2026-07-09",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2026-07-01"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-07-09"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trip History - All Filters",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/trips?page=1&limit=10&search=Office&date_from=2026-07-01&date_to=2026-07-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "trips"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "Office"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2026-07-01"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2026-07-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

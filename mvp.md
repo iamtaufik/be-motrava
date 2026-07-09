@@ -19,7 +19,7 @@
 | Trip Tracking | ✅ Completed |
 | Live Tracking | ✅ Completed |
 | Trip Summary | ✅ Completed |
-| Trip History | ⏳ Todo |
+| Trip History | ✅ Completed |
 | Trip Detail | ⏳ Todo |
 | Dashboard | ⏳ Todo |
 
@@ -196,9 +196,9 @@ Kemudian status Trip menjadi Completed.
 
 ---
 
-# 6. Trip History
+# 6. Trip History ✅
 
-Status: Todo
+Status: Completed
 
 Menampilkan daftar perjalanan.
 
@@ -222,9 +222,13 @@ Date
 
 Features
 
-- Pagination
-- Search
-- Filter by Date
+- Pagination (page, limit)
+- Search (search by start_address / end_address)
+- Filter by Date (date_from, date_to)
+
+## API
+
+- ✅ GET /api/trips
 
 ---
 
