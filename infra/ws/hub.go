@@ -104,6 +104,8 @@ func (h *Hub) HandlePosition(payload PositionUpdate, speed float64) {
 
 	data, _ := json.Marshal(payload)
 
+	h.log.Info("ws broadcast", "module", "ws_hub", "trip_id", payload.TripID, "body", string(data))
+
 	h.rdb.Set(context.Background(), "trip:"+payload.TripID+":current", string(data), 0)
 
 	h.BroadcastToTrip(payload.TripID, data)

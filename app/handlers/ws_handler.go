@@ -86,6 +86,7 @@ func (h *WSHandler) handleConnection(conn *websocket.Conn, userID uuid.UUID) {
 		}
 
 		msgType, _ := raw["type"].(string)
+		h.log.Info("ws message", "module", "ws_handler", "type", msgType, "body", string(msg))
 
 		switch msgType {
 		case "auth":
