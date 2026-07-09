@@ -157,7 +157,11 @@ func (h *WSHandler) handleConnection(conn *websocket.Conn, userID uuid.UUID) {
 				RecordedAt: recordedAt,
 			}
 
-			go h.tripUsecase.ProcessLocation(userID.String(), tripID, tripPoint, payload.Speed)
+			go func() {
+				if err := h.tripUsecase.ProcessLocation(userID.String(), tripID, tripPoint, payload.Speed); err != nil {
+					h.log.Error("ws process location failed", "module", "ws_handler", "error", err)
+				}
+			}()
 
 			h.hub.UpdateLastPoint(tripID, tripPoint)
 
