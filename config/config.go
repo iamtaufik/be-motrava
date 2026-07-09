@@ -11,6 +11,9 @@ import (
 type Config struct {
 	AppPort               string
 	DatabaseURL           string
+	RedisURL              string
+	RedisPassword         string
+	RedisDB               int
 	LogFile               string
 	JWTSecret             string
 	JWTIssuer             string
@@ -28,6 +31,9 @@ func Load() Config {
 	return Config{
 		AppPort:               getEnv("APP_PORT", "3000"),
 		DatabaseURL:           getEnv("DATABASE_URL", "host=localhost user=postgres password=postgres dbname=motrava port=5432 sslmode=disable TimeZone=UTC"),
+		RedisURL:              getEnv("REDIS_URL", "localhost:6379"),
+		RedisPassword:         getEnv("REDIS_PASSWORD", ""),
+		RedisDB:               getEnvInt("REDIS_DB", 0),
 		LogFile:               getEnv("LOG_FILE", "log.json"),
 		JWTSecret:             getEnv("JWT_SECRET", ""),
 		JWTIssuer:             getEnv("JWT_ISSUER", "motrava"),

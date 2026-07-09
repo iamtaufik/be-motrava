@@ -16,9 +16,9 @@
 |----------|--------|
 | Authentication | ✅ Completed |
 | Vehicle Management | ✅ Completed |
-| Trip Tracking | ⏳ Todo |
-| Live Tracking | ⏳ Todo |
-| Trip Summary | ⏳ Todo |
+| Trip Tracking | ✅ Completed |
+| Live Tracking | ✅ Completed |
+| Trip Summary | ✅ Completed |
 | Trip History | ⏳ Todo |
 | Trip Detail | ⏳ Todo |
 | Dashboard | ⏳ Todo |
@@ -80,9 +80,9 @@ AG 4321 YY
 
 ---
 
-# 3. Start Trip
+# 3. Start Trip ✅
 
-Status: Todo
+Status: Completed
 
 ## Description
 
@@ -133,9 +133,9 @@ or
 
 ---
 
-# 4. Live Tracking
+# 4. Live Tracking ✅
 
-Status: Todo
+Status: Completed
 
 ## Description
 
@@ -171,9 +171,9 @@ Dashboard
 
 ---
 
-# 5. End Trip
+# 5. End Trip ✅
 
-Status: Todo
+Status: Completed
 
 ## Description
 
@@ -278,6 +278,8 @@ Menampilkan ringkasan aktivitas user.
 - M_USER ✅
 - M_REFRESH_TOKEN ✅
 - M_VEHICLE ✅
+- M_TRIP ✅
+- M_TRIP_POINT ✅
 
 ---
 
@@ -304,11 +306,9 @@ Menampilkan ringkasan aktivitas user.
 
 ## Trip
 
-- POST /api/trips/start
-- POST /api/trips/location
-- POST /api/trips/end
-- GET /api/trips
-- GET /api/trips/:id
+- ✅ POST /api/trips/start
+- ✅ POST /api/trips/:id/end
+- ✅ WS /api/ws/trip/location?token={jwt}
 
 ---
 

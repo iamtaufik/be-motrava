@@ -14,6 +14,8 @@ type Handlers struct {
 	AuthHandler    *handlers.AuthHandler
 	UserHandler    *handlers.UserHandler
 	VehicleHandler *handlers.VehicleHandler
+	TripHandler    *handlers.TripHandler
+	WSHandler      *handlers.WSHandler
 }
 
 type Router struct {
@@ -76,4 +78,10 @@ func (r *Router) SetupRouters() {
 	vehicle.Put("/:id", r.handlers.VehicleHandler.UpdateVehicle)
 	vehicle.Delete("/:id", r.handlers.VehicleHandler.DeleteVehicle)
 	vehicle.Put("/:id/default", r.handlers.VehicleHandler.SetDefaultVehicle)
+
+	trip := api.Group("/trips", r.authMiddleware)
+	trip.Post("/start", r.handlers.TripHandler.StartTrip)
+	trip.Post("/:id/end", r.handlers.TripHandler.EndTrip)
+
+	api.Get("/ws/trip/location", r.handlers.WSHandler.Upgrade)
 }
