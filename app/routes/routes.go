@@ -11,8 +11,9 @@ import (
 )
 
 type Handlers struct {
-	AuthHandler *handlers.AuthHandler
-	UserHandler *handlers.UserHandler
+	AuthHandler    *handlers.AuthHandler
+	UserHandler    *handlers.UserHandler
+	VehicleHandler *handlers.VehicleHandler
 }
 
 type Router struct {
@@ -67,4 +68,12 @@ func (r *Router) SetupRouters() {
 	auth.Get("/google/login", r.handlers.AuthHandler.GoogleLogin)
 	auth.Get("/google/callback", r.handlers.AuthHandler.GoogleCallback)
 	auth.Post("/google/mobile", r.handlers.AuthHandler.GoogleMobileLogin)
+
+	vehicle := api.Group("/vehicles", r.authMiddleware)
+	vehicle.Post("/", r.handlers.VehicleHandler.CreateVehicle)
+	vehicle.Get("/", r.handlers.VehicleHandler.ListVehicles)
+	vehicle.Get("/:id", r.handlers.VehicleHandler.GetVehicleByID)
+	vehicle.Put("/:id", r.handlers.VehicleHandler.UpdateVehicle)
+	vehicle.Delete("/:id", r.handlers.VehicleHandler.DeleteVehicle)
+	vehicle.Put("/:id/default", r.handlers.VehicleHandler.SetDefaultVehicle)
 }

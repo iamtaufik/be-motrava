@@ -22,11 +22,13 @@ import (
 type repositories struct {
 	userRepo         repository.UserRepository
 	refreshTokenRepo repository.RefreshTokenRepository
+	vehicleRepo      repository.VehicleRepository
 }
 
 type usecases struct {
-	authUsecase portUsecase.AuthUsecase
-	userUsecase portUsecase.UserUsecase
+	authUsecase   portUsecase.AuthUsecase
+	userUsecase   portUsecase.UserUsecase
+	vehicleUsecase portUsecase.VehicleUsecase
 }
 
 type Application struct {
@@ -48,8 +50,9 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 	authMiddleware := middleware.AuthMiddleware(cfg, repos.userRepo, logger)
 
 	routes.NewRoutes(fiberApp, logger, routes.Handlers{
-		AuthHandler: handlers.NewAuthHandler(usecases.authUsecase, logger),
-		UserHandler: handlers.NewUserHandler(usecases.userUsecase, logger),
+		AuthHandler:    handlers.NewAuthHandler(usecases.authUsecase, logger),
+		UserHandler:    handlers.NewUserHandler(usecases.userUsecase, logger),
+		VehicleHandler: handlers.NewVehicleHandler(usecases.vehicleUsecase, logger),
 	}, authMiddleware).SetupRouters()
 
 	logger.Info("application modules wired", "module", "app")
@@ -66,13 +69,15 @@ func newRepositories(db *gorm.DB, logger *slog.Logger) *repositories {
 	return &repositories{
 		userRepo:         infraRepo.NewUserRepositoryGorm(db, logger),
 		refreshTokenRepo: infraRepo.NewRefreshTokenRepositoryGorm(db, logger),
+		vehicleRepo:      infraRepo.NewVehicleRepositoryGorm(db, logger),
 	}
 }
 
 func newUsecases(cfg config.Config, repos *repositories, logger *slog.Logger) *usecases {
 	return &usecases{
-		authUsecase: usecase.NewAuthUsecase(cfg, repos.userRepo, repos.refreshTokenRepo, logger),
-		userUsecase: usecase.NewUserUsecase(repos.userRepo),
+		authUsecase:    usecase.NewAuthUsecase(cfg, repos.userRepo, repos.refreshTokenRepo, logger),
+		userUsecase:    usecase.NewUserUsecase(repos.userRepo),
+		vehicleUsecase: usecase.NewVehicleUsecase(repos.vehicleRepo),
 	}
 }
 
