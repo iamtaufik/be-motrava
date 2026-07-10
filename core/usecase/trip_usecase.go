@@ -142,7 +142,7 @@ func (u *tripUsecase) GetTripHistory(userID string, req dto.TripHistoryRequest) 
 	return items, meta, nil
 }
 
-func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models.TripPoint, speed float64) error {
+func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models.TripPoint) error {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return fmt.Errorf("invalid user id: %w", err)
@@ -168,25 +168,6 @@ func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models
 
 	if err := u.tripPointRepo.Create(&point); err != nil {
 		return err
-	}
-
-	lastPoint, _ := u.tripPointRepo.FindLastByTripID(tid)
-	if lastPoint != nil && lastPoint.ID != point.ID {
-		dist := haversine(lastPoint.Latitude, lastPoint.Longitude, point.Latitude, point.Longitude)
-		trip.TotalDistance += dist
-
-		timeDiff := point.RecordedAt.Sub(lastPoint.RecordedAt).Seconds()
-		if timeDiff > 0 {
-			if speed > movingSpeedThreshold {
-				trip.MovingTime += int(timeDiff)
-			} else {
-				trip.IdleTime += int(timeDiff)
-			}
-		}
-	}
-
-	if speed > trip.MaximumSpeed {
-		trip.MaximumSpeed = speed
 	}
 
 	if trip.StartLatitude == 0 && trip.StartLongitude == 0 {
@@ -233,6 +214,52 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 	elapsed := now.Sub(trip.StartTime).Seconds()
 	trip.Duration = int(elapsed)
 
+	// Calculate all metrics from trip points
+	points, err := u.tripPointRepo.FindAllByTripID(tid)
+	if err != nil {
+		return nil, err
+	}
+
+	var totalDistance float64
+	var maxSpeed float64
+	var movingTime int
+	var idleTime int
+
+	for i, p := range points {
+		if p.Speed > maxSpeed {
+			maxSpeed = p.Speed
+		}
+
+		if i > 0 {
+			prev := points[i-1]
+			dist := haversine(prev.Latitude, prev.Longitude, p.Latitude, p.Longitude)
+			totalDistance += dist
+
+			timeDiff := p.RecordedAt.Sub(prev.RecordedAt).Seconds()
+			if timeDiff > 0 {
+				if p.Speed > movingSpeedThreshold {
+					movingTime += int(timeDiff)
+				} else {
+					idleTime += int(timeDiff)
+				}
+			}
+		}
+	}
+
+	trip.TotalDistance = math.Round(totalDistance*100) / 100
+	trip.MaximumSpeed = math.Round(maxSpeed*100) / 100
+	trip.MovingTime = movingTime
+	trip.IdleTime = idleTime
+
+	if len(points) > 0 {
+		trip.StartLatitude = points[0].Latitude
+		trip.StartLongitude = points[0].Longitude
+		endLat := points[len(points)-1].Latitude
+		endLon := points[len(points)-1].Longitude
+		trip.EndLatitude = &endLat
+		trip.EndLongitude = &endLon
+	}
+
 	if trip.TotalDistance > 0 && trip.Duration > 0 {
 		avgSpeed := (trip.TotalDistance / 1000.0) / (float64(trip.Duration) / 3600.0)
 		trip.AverageSpeed = math.Round(avgSpeed*100) / 100
@@ -249,8 +276,6 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 		}
 	}
 
-	trip.MaximumSpeed = math.Round(trip.MaximumSpeed*100) / 100
-	trip.TotalDistance = math.Round(trip.TotalDistance*100) / 100
 	trip.Status = models.TripStatusCompleted
 
 	if err := u.tripRepo.Save(trip); err != nil {
