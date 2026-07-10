@@ -42,6 +42,7 @@ type TripHistoryItem struct {
 	ID            string     `json:"id"`
 	VehicleName   string     `json:"vehicle_name"`
 	PlateNumber   string     `json:"plate_number"`
+	VehicleType   string     `json:"vehicle_type"`
 	StartTime     time.Time  `json:"start_time"`
 	EndTime       *time.Time `json:"end_time,omitempty"`
 	StartAddress  *string    `json:"start_address,omitempty"`

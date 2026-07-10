@@ -116,6 +116,7 @@ func (u *tripUsecase) GetTripHistory(userID string, req dto.TripHistoryRequest) 
 			ID:            t.ID.String(),
 			VehicleName:   vehicleName,
 			PlateNumber:   plateNumber,
+			VehicleType:   t.Vehicle.VehicleType,
 			StartTime:     t.StartTime,
 			EndTime:       t.EndTime,
 			StartAddress:  t.StartAddress,
