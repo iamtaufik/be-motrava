@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -17,23 +18,30 @@ import (
 	"motrava/core/usecase"
 	portUsecase "motrava/core/port/usecase"
 	"motrava/infra/database"
+	fcmInfra "motrava/infra/fcm"
 	infraRepo "motrava/infra/repository"
 	wsInfra "motrava/infra/ws"
 )
 
 type repositories struct {
-	userRepo         repository.UserRepository
-	refreshTokenRepo repository.RefreshTokenRepository
-	vehicleRepo      repository.VehicleRepository
-	tripRepo         repository.TripRepository
-	tripPointRepo    repository.TripPointRepository
+	userRepo              repository.UserRepository
+	refreshTokenRepo      repository.RefreshTokenRepository
+	vehicleRepo           repository.VehicleRepository
+	tripRepo              repository.TripRepository
+	tripPointRepo         repository.TripPointRepository
+	serviceReminderRepo   repository.ServiceReminderRepository
+	manualDistanceLogRepo repository.ManualDistanceLogRepository
+	userDeviceRepo        repository.UserDeviceRepository
 }
 
 type usecases struct {
-	authUsecase    portUsecase.AuthUsecase
-	userUsecase    portUsecase.UserUsecase
-	vehicleUsecase portUsecase.VehicleUsecase
-	tripUsecase    portUsecase.TripUsecase
+	authUsecase            portUsecase.AuthUsecase
+	userUsecase            portUsecase.UserUsecase
+	vehicleUsecase         portUsecase.VehicleUsecase
+	tripUsecase            portUsecase.TripUsecase
+	serviceReminderUsecase portUsecase.ServiceReminderUsecase
+	deviceUsecase          portUsecase.DeviceUsecase
+	reminderNotifier       *usecase.ReminderNotifier
 }
 
 type Application struct {
@@ -57,16 +65,20 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 
 	fiberApp := fiber.New()
 	repos := newRepositories(db, logger)
-	usecases := newUsecases(cfg, repos, logger)
+	useCases := newUsecases(cfg, repos, logger)
 	wsHub := wsInfra.NewHub(logger, rdb, repos.tripPointRepo)
 	authMiddleware := middleware.AuthMiddleware(cfg, repos.userRepo, logger)
 
+	usecase.StartReminderScheduler(30*time.Minute, useCases.reminderNotifier, repos.serviceReminderRepo)
+
 	routes.NewRoutes(fiberApp, logger, routes.Handlers{
-		AuthHandler:    handlers.NewAuthHandler(usecases.authUsecase, logger),
-		UserHandler:    handlers.NewUserHandler(usecases.userUsecase, logger),
-		VehicleHandler: handlers.NewVehicleHandler(usecases.vehicleUsecase, logger),
-		TripHandler:    handlers.NewTripHandler(usecases.tripUsecase, logger),
-		WSHandler:      handlers.NewWSHandler(usecases.tripUsecase, wsHub, rdb, logger, cfg.JWTSecret, cfg.JWTIssuer),
+		AuthHandler:            handlers.NewAuthHandler(useCases.authUsecase, logger),
+		UserHandler:            handlers.NewUserHandler(useCases.userUsecase, logger),
+		VehicleHandler:         handlers.NewVehicleHandler(useCases.vehicleUsecase, logger),
+		TripHandler:            handlers.NewTripHandler(useCases.tripUsecase, logger),
+		WSHandler:              handlers.NewWSHandler(useCases.tripUsecase, wsHub, rdb, logger, cfg.JWTSecret, cfg.JWTIssuer),
+		ServiceReminderHandler: handlers.NewServiceReminderHandler(useCases.serviceReminderUsecase, logger),
+		DeviceHandler:          handlers.NewDeviceHandler(useCases.deviceUsecase, logger),
 	}, authMiddleware).SetupRouters()
 
 	logger.Info("application modules wired", "module", "app")
@@ -82,20 +94,34 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 
 func newRepositories(db *gorm.DB, logger *slog.Logger) *repositories {
 	return &repositories{
-		userRepo:         infraRepo.NewUserRepositoryGorm(db, logger),
-		refreshTokenRepo: infraRepo.NewRefreshTokenRepositoryGorm(db, logger),
-		vehicleRepo:      infraRepo.NewVehicleRepositoryGorm(db, logger),
-		tripRepo:         infraRepo.NewTripRepositoryGorm(db, logger),
-		tripPointRepo:    infraRepo.NewTripPointRepositoryGorm(db, logger),
+		userRepo:              infraRepo.NewUserRepositoryGorm(db, logger),
+		refreshTokenRepo:      infraRepo.NewRefreshTokenRepositoryGorm(db, logger),
+		vehicleRepo:           infraRepo.NewVehicleRepositoryGorm(db, logger),
+		tripRepo:              infraRepo.NewTripRepositoryGorm(db, logger),
+		tripPointRepo:         infraRepo.NewTripPointRepositoryGorm(db, logger),
+		serviceReminderRepo:   infraRepo.NewServiceReminderRepositoryGorm(db, logger),
+		manualDistanceLogRepo: infraRepo.NewManualDistanceLogRepositoryGorm(db, logger),
+		userDeviceRepo:        infraRepo.NewUserDeviceRepositoryGorm(db, logger),
 	}
 }
 
 func newUsecases(cfg config.Config, repos *repositories, logger *slog.Logger) *usecases {
+	fcmClient, err := fcmInfra.NewFCMClient(context.Background(), cfg.FCMCredentialsFile, cfg.FCMProjectID, logger)
+	if err != nil {
+		logger.Warn("fcm client not available, using no-op", "module", "app", "error", err)
+		fcmClient = fcmInfra.NewNoopFCMClient(logger)
+	}
+
+	reminderNotifier := usecase.NewReminderNotifier(fcmClient, repos.userDeviceRepo)
+
 	return &usecases{
-		authUsecase:    usecase.NewAuthUsecase(cfg, repos.userRepo, repos.refreshTokenRepo, logger),
-		userUsecase:    usecase.NewUserUsecase(repos.userRepo),
-		vehicleUsecase: usecase.NewVehicleUsecase(repos.vehicleRepo),
-		tripUsecase:    usecase.NewTripUsecase(repos.tripRepo, repos.tripPointRepo, repos.vehicleRepo),
+		authUsecase:            usecase.NewAuthUsecase(cfg, repos.userRepo, repos.refreshTokenRepo, logger),
+		userUsecase:            usecase.NewUserUsecase(repos.userRepo),
+		vehicleUsecase:         usecase.NewVehicleUsecase(repos.vehicleRepo),
+		tripUsecase:            usecase.NewTripUsecase(repos.tripRepo, repos.tripPointRepo, repos.vehicleRepo, repos.serviceReminderRepo, reminderNotifier),
+		serviceReminderUsecase: usecase.NewServiceReminderUsecase(repos.serviceReminderRepo, repos.manualDistanceLogRepo, repos.vehicleRepo, reminderNotifier),
+		deviceUsecase:          usecase.NewDeviceUsecase(repos.userDeviceRepo),
+		reminderNotifier:       reminderNotifier,
 	}
 }
 

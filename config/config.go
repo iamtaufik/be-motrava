@@ -23,6 +23,8 @@ type Config struct {
 	GoogleClientSecret    string
 	GoogleRedirectURL     string
 	GoogleFrontendURL     string
+	FCMCredentialsFile   string
+	FCMProjectID         string
 }
 
 func Load() Config {
@@ -43,6 +45,8 @@ func Load() Config {
 		GoogleClientSecret:    getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GoogleRedirectURL:     getEnv("GOOGLE_REDIRECT_URL", "http://localhost:3000/api/auth/google/callback"),
 		GoogleFrontendURL:     getEnv("GOOGLE_FRONTEND_URL", ""),
+		FCMCredentialsFile:    getEnv("FCM_CREDENTIALS_FILE", "service-account.json"),
+		FCMProjectID:          getEnv("FCM_PROJECT_ID", ""),
 	}
 }
 

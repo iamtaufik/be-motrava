@@ -21,20 +21,26 @@ const (
 )
 
 type tripUsecase struct {
-	tripRepo      repository.TripRepository
-	tripPointRepo repository.TripPointRepository
-	vehicleRepo   repository.VehicleRepository
+	tripRepo        repository.TripRepository
+	tripPointRepo   repository.TripPointRepository
+	vehicleRepo     repository.VehicleRepository
+	reminderRepo    repository.ServiceReminderRepository
+	reminderNotifier *ReminderNotifier
 }
 
 func NewTripUsecase(
 	tripRepo repository.TripRepository,
 	tripPointRepo repository.TripPointRepository,
 	vehicleRepo repository.VehicleRepository,
+	reminderRepo repository.ServiceReminderRepository,
+	reminderNotifier *ReminderNotifier,
 ) portUsecase.TripUsecase {
 	return &tripUsecase{
-		tripRepo:      tripRepo,
-		tripPointRepo: tripPointRepo,
-		vehicleRepo:   vehicleRepo,
+		tripRepo:        tripRepo,
+		tripPointRepo:   tripPointRepo,
+		vehicleRepo:     vehicleRepo,
+		reminderRepo:    reminderRepo,
+		reminderNotifier: reminderNotifier,
 	}
 }
 
@@ -282,6 +288,8 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 	if err := u.tripRepo.Save(trip); err != nil {
 		return nil, err
 	}
+
+	AddTripDistanceToReminders(trip.TotalDistance, trip.VehicleID, u.reminderRepo, u.reminderNotifier)
 
 	res := toTripResponse(*trip)
 	return &res, nil

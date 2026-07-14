@@ -11,11 +11,13 @@ import (
 )
 
 type Handlers struct {
-	AuthHandler    *handlers.AuthHandler
-	UserHandler    *handlers.UserHandler
-	VehicleHandler *handlers.VehicleHandler
-	TripHandler    *handlers.TripHandler
-	WSHandler      *handlers.WSHandler
+	AuthHandler            *handlers.AuthHandler
+	UserHandler            *handlers.UserHandler
+	VehicleHandler         *handlers.VehicleHandler
+	TripHandler            *handlers.TripHandler
+	WSHandler              *handlers.WSHandler
+	ServiceReminderHandler *handlers.ServiceReminderHandler
+	DeviceHandler          *handlers.DeviceHandler
 }
 
 type Router struct {
@@ -86,4 +88,16 @@ func (r *Router) SetupRouters() {
 	trip.Post("/:id/end", r.handlers.TripHandler.EndTrip)
 
 	api.Get("/ws/trip/location", r.handlers.WSHandler.Upgrade)
+
+	device := api.Group("/devices", r.authMiddleware)
+	device.Post("/register", r.handlers.DeviceHandler.RegisterDevice)
+
+	serviceReminder := vehicle.Group("/:vehicleId/service-reminders")
+	serviceReminder.Post("/", r.handlers.ServiceReminderHandler.CreateReminder)
+	serviceReminder.Get("/", r.handlers.ServiceReminderHandler.ListReminders)
+	serviceReminder.Get("/:reminderId/progress", r.handlers.ServiceReminderHandler.GetReminderProgress)
+	serviceReminder.Put("/:reminderId", r.handlers.ServiceReminderHandler.UpdateReminder)
+	serviceReminder.Delete("/:reminderId", r.handlers.ServiceReminderHandler.DeleteReminder)
+	serviceReminder.Post("/:reminderId/reset", r.handlers.ServiceReminderHandler.ResetReminder)
+	serviceReminder.Post("/:reminderId/manual-distance", r.handlers.ServiceReminderHandler.AddManualDistance)
 }
