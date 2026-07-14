@@ -20,7 +20,7 @@
 | Live Tracking | ✅ Completed |
 | Trip Summary | ✅ Completed |
 | Trip History | ✅ Completed |
-| Trip Detail | ⏳ Todo |
+| Trip Detail | ✅ Completed |
 | Dashboard | ⏳ Todo |
 
 ---
@@ -232,9 +232,9 @@ Features
 
 ---
 
-# 7. Trip Detail
+# 7. Trip Detail ✅
 
-Status: Todo
+Status: Completed
 
 Menampilkan detail perjalanan.
 
@@ -249,6 +249,10 @@ Menampilkan detail perjalanan.
 - Maximum Speed
 - Moving Time
 - Idle Time
+
+## API
+
+- ✅ GET /api/trips/:id
 
 Future
 
@@ -310,6 +314,8 @@ Menampilkan ringkasan aktivitas user.
 
 ## Trip
 
+- ✅ GET /api/trips
+- ✅ GET /api/trips/:id
 - ✅ POST /api/trips/start
 - ✅ POST /api/trips/:id/end
 - ✅ WS /api/ws/trip/location?token={jwt}

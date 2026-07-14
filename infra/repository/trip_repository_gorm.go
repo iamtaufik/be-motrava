@@ -21,7 +21,7 @@ func NewTripRepositoryGorm(db *gorm.DB, logger *slog.Logger) coreRepo.TripReposi
 
 func (r *tripRepositoryGorm) FindByID(id uuid.UUID) (*models.Trip, error) {
 	var trip models.Trip
-	if err := r.db.First(&trip, id).Error; err != nil {
+	if err := r.db.Preload("Vehicle").First(&trip, id).Error; err != nil {
 		r.log.Error("failed to query trip by id", "module", "trip_repository", "error", err, "trip_id", id)
 		return nil, err
 	}

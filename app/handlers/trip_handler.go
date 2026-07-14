@@ -82,6 +82,28 @@ func (h *TripHandler) EndTrip(c *fiber.Ctx) error {
 	return response.OK(c, "trip completed", trip)
 }
 
+func (h *TripHandler) GetTripDetail(c *fiber.Ctx) error {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return response.Error(c, fiber.StatusUnauthorized, "unauthorized", nil)
+	}
+
+	trip, err := h.tripUsecase.GetTripDetail(user.ID.String(), c.Params("id"))
+	if err != nil {
+		h.log.Error("get trip detail failed", "module", "trip_handler", "error", err)
+		msg := err.Error()
+		if strings.Contains(msg, "trip not found") {
+			return response.Error(c, fiber.StatusNotFound, msg, nil)
+		}
+		if strings.Contains(msg, "invalid trip id") {
+			return response.ValidationError(c, fiber.Map{"id": "must be a valid UUID"})
+		}
+		return response.Error(c, fiber.StatusInternalServerError, "failed to get trip detail", nil)
+	}
+
+	return response.OK(c, "trip detail retrieved", trip)
+}
+
 func (h *TripHandler) GetTripHistory(c *fiber.Ctx) error {
 	user, ok := middleware.CurrentUser(c)
 	if !ok {

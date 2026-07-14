@@ -287,6 +287,88 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 	return &res, nil
 }
 
+func (u *tripUsecase) GetTripDetail(userID string, tripID string) (*dto.TripDetailResponse, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %w", err)
+	}
+
+	tid, err := uuid.Parse(tripID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid trip id: %w", err)
+	}
+
+	trip, err := u.tripRepo.FindByID(tid)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("trip not found")
+		}
+		return nil, err
+	}
+
+	if trip.UserID != uid {
+		return nil, fmt.Errorf("trip not found")
+	}
+
+	points, err := u.tripPointRepo.FindAllByTripID(tid)
+	if err != nil {
+		return nil, err
+	}
+
+	route := make([]dto.PointPayload, len(points))
+	for i, p := range points {
+		route[i] = dto.PointPayload{
+			Latitude:   p.Latitude,
+			Longitude:  p.Longitude,
+			Speed:      p.Speed,
+			Heading:    p.Heading,
+			Accuracy:   p.Accuracy,
+			Altitude:   p.Altitude,
+			Battery:    p.Battery,
+			RecordedAt: p.RecordedAt.Format(time.RFC3339),
+		}
+	}
+
+	vehicleName := ""
+	plateNumber := ""
+	vehicleType := ""
+	if trip.Vehicle.VehicleName != "" {
+		vehicleName = trip.Vehicle.VehicleName
+		plateNumber = trip.Vehicle.PlateNumber
+		vehicleType = trip.Vehicle.VehicleType
+	}
+
+	res := dto.TripDetailResponse{
+		ID:             trip.ID.String(),
+		UserID:         trip.UserID.String(),
+		VehicleID:      trip.VehicleID.String(),
+		VehicleName:    vehicleName,
+		PlateNumber:    plateNumber,
+		VehicleType:    vehicleType,
+		StartTime:      trip.StartTime,
+		EndTime:        trip.EndTime,
+		StartLatitude:  trip.StartLatitude,
+		StartLongitude: trip.StartLongitude,
+		EndLatitude:    trip.EndLatitude,
+		EndLongitude:   trip.EndLongitude,
+		StartAddress:   trip.StartAddress,
+		EndAddress:     trip.EndAddress,
+		TotalDistance:  trip.TotalDistance,
+		Duration:       trip.Duration,
+		MovingTime:     trip.MovingTime,
+		IdleTime:       trip.IdleTime,
+		AverageSpeed:   trip.AverageSpeed,
+		MaximumSpeed:   trip.MaximumSpeed,
+		FuelConsumed:   trip.FuelConsumed,
+		Status:         trip.Status,
+		Route:          route,
+		CreatedAt:      trip.CreatedAt,
+		UpdatedAt:      trip.UpdatedAt,
+	}
+
+	return &res, nil
+}
+
 func toTripResponse(t models.Trip) dto.TripResponse {
 	return dto.TripResponse{
 		ID:             t.ID.String(),

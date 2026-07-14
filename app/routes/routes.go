@@ -81,6 +81,7 @@ func (r *Router) SetupRouters() {
 
 	trip := api.Group("/trips", r.authMiddleware)
 	trip.Get("/", r.handlers.TripHandler.GetTripHistory)
+	trip.Get("/:id", r.handlers.TripHandler.GetTripDetail)
 	trip.Post("/start", r.handlers.TripHandler.StartTrip)
 	trip.Post("/:id/end", r.handlers.TripHandler.EndTrip)
 
