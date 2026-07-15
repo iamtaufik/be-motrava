@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	ServiceReminderThresholdPercent = 80.0
+	ServiceReminderThresholdPercent = 90.0
 )
 
 type serviceReminderUsecase struct {
