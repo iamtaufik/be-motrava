@@ -167,6 +167,9 @@ func (u *vehicleUsecase) UpdateVehicle(id string, userID string, input dto.Updat
 	if input.FuelEfficiencyKmPerLiter != nil {
 		vehicle.FuelEfficiencyKmPerLiter = input.FuelEfficiencyKmPerLiter
 	}
+	if input.InitialKM != nil {
+		vehicle.InitialKM = input.InitialKM
+	}
 
 	if err := u.vehicleRepo.Save(vehicle); err != nil {
 		return nil, err

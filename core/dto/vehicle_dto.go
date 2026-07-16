@@ -25,6 +25,7 @@ type UpdateVehicleRequest struct {
 	Year                    *int     `json:"year,omitempty"`
 	Photo                   *string  `json:"photo,omitempty"`
 	FuelEfficiencyKmPerLiter *float64 `json:"fuel_efficiency_km_per_liter,omitempty"`
+	InitialKM               *float64 `json:"initial_km,omitempty"`
 }
 
 type VehicleResponse struct {
