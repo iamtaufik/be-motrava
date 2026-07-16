@@ -201,12 +201,12 @@ func (u *serviceReminderUsecase) AddManualDistance(userID string, vehicleID stri
 
 	reminder.AccumulatedKM = math.Round(input.DistanceKM*100) / 100
 
-	if err := u.reminderRepo.Save(reminder); err != nil {
-		return nil, err
-	}
-
 	if u.notifier != nil {
 		u.notifier.CheckAndNotify(reminder)
+	}
+
+	if err := u.reminderRepo.Save(reminder); err != nil {
+		return nil, err
 	}
 
 	res := toServiceReminderResponse(*reminder)

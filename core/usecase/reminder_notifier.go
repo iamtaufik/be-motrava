@@ -36,9 +36,6 @@ func (n *ReminderNotifier) CheckAndNotify(reminder *models.ServiceReminder) {
 		if reminder.LastServiceAt != nil && reminder.NotifiedAt.After(*reminder.LastServiceAt) {
 			return
 		}
-		if reminder.LastServiceAt == nil {
-			return
-		}
 	}
 
 	devices, err := n.deviceRepo.FindByUserID(reminder.UserID)
@@ -72,6 +69,9 @@ func (n *ReminderNotifier) CheckAndNotify(reminder *models.ServiceReminder) {
 	}
 
 	n.fcmClient.SendMulticast(tokens, notification)
+
+	now := time.Now().UTC()
+	reminder.NotifiedAt = &now
 }
 
 func (n *ReminderNotifier) NotifyAllActive(reminders []models.ServiceReminder) {
@@ -101,9 +101,6 @@ func (n *ReminderNotifier) ProcessAllActive(reminderRepo repository.ServiceRemin
 
 		if r.NotifiedAt != nil {
 			if r.LastServiceAt != nil && r.NotifiedAt.After(*r.LastServiceAt) {
-				continue
-			}
-			if r.LastServiceAt == nil {
 				continue
 			}
 		}
@@ -168,9 +165,6 @@ func UpdateNotifiedAt(reminder *models.ServiceReminder, notifier *ReminderNotifi
 		if reminder.LastServiceAt != nil && reminder.NotifiedAt.After(*reminder.LastServiceAt) {
 			return
 		}
-		if reminder.LastServiceAt == nil {
-			return
-		}
 	}
 
 	now := time.Now().UTC()
@@ -199,10 +193,11 @@ func AddTripDistanceToReminders(tripDistanceMeters float64, vehicleID uuid.UUID,
 		}
 
 		r.AccumulatedKM = math.Round((r.AccumulatedKM+tripKM)*100) / 100
-		reminderRepo.Save(r)
 
 		if notifier != nil {
 			notifier.CheckAndNotify(r)
 		}
+
+		reminderRepo.Save(r)
 	}
 }
