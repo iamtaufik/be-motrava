@@ -15,13 +15,14 @@ import (
 	"motrava/core/repository"
 )
 
+var _ portUsecase.VehicleUsecase = (*vehicleUsecase)(nil)
+
 type vehicleUsecase struct {
 	vehicleRepo repository.VehicleRepository
-	tripRepo    repository.TripRepository
 }
 
-func NewVehicleUsecase(vehicleRepo repository.VehicleRepository, tripRepo repository.TripRepository) portUsecase.VehicleUsecase {
-	return &vehicleUsecase{vehicleRepo: vehicleRepo, tripRepo: tripRepo}
+func NewVehicleUsecase(vehicleRepo repository.VehicleRepository) portUsecase.VehicleUsecase {
+	return &vehicleUsecase{vehicleRepo: vehicleRepo}
 }
 
 func (u *vehicleUsecase) ListVehicles(userID string) ([]dto.VehicleResponse, error) {
@@ -38,7 +39,7 @@ func (u *vehicleUsecase) ListVehicles(userID string) ([]dto.VehicleResponse, err
 	responses := make([]dto.VehicleResponse, 0, len(vehicles))
 	for _, v := range vehicles {
 		res := toVehicleResponse(v)
-		res.TotalDistanceKM = u.calcTotalDistanceKM(v.ID)
+		res.TotalDistanceKM = calcTotalDistanceKM(v)
 		responses = append(responses, res)
 	}
 
@@ -65,7 +66,7 @@ func (u *vehicleUsecase) GetVehicleByID(id string, userID string) (*dto.VehicleR
 	}
 
 	res := toVehicleResponse(*vehicle)
-	res.TotalDistanceKM = u.calcTotalDistanceKM(vehicle.ID)
+	res.TotalDistanceKM = calcTotalDistanceKM(*vehicle)
 	return &res, nil
 }
 
@@ -233,12 +234,15 @@ func (u *vehicleUsecase) SetDefaultVehicle(id string, userID string) (*dto.Vehic
 	return &res, nil
 }
 
-func (u *vehicleUsecase) calcTotalDistanceKM(vehicleID uuid.UUID) float64 {
-	totalMeters, err := u.tripRepo.SumDistanceByVehicleID(vehicleID)
-	if err != nil {
+func calcTotalDistanceKM(v models.Vehicle) float64 {
+	if v.InitialKM == nil {
 		return 0
 	}
-	return math.Round((totalMeters/1000.0)*100) / 100
+	total := v.LastRecordedOdometerKM - *v.InitialKM
+	if total < 0 {
+		return 0
+	}
+	return math.Round(total*100) / 100
 }
 
 func toVehicleResponse(v models.Vehicle) dto.VehicleResponse {
