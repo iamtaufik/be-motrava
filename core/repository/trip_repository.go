@@ -12,6 +12,7 @@ type TripRepository interface {
 	FindByUserID(userID uuid.UUID, page, limit int, search, dateFrom, dateTo string) ([]models.Trip, int64, error)
 	Create(trip *models.Trip) error
 	Save(trip *models.Trip) error
+	SumDistanceByVehicleID(vehicleID uuid.UUID) (float64, error)
 }
 
 type TripPointRepository interface {

@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/google/uuid"
@@ -16,10 +17,11 @@ import (
 
 type vehicleUsecase struct {
 	vehicleRepo repository.VehicleRepository
+	tripRepo    repository.TripRepository
 }
 
-func NewVehicleUsecase(vehicleRepo repository.VehicleRepository) portUsecase.VehicleUsecase {
-	return &vehicleUsecase{vehicleRepo: vehicleRepo}
+func NewVehicleUsecase(vehicleRepo repository.VehicleRepository, tripRepo repository.TripRepository) portUsecase.VehicleUsecase {
+	return &vehicleUsecase{vehicleRepo: vehicleRepo, tripRepo: tripRepo}
 }
 
 func (u *vehicleUsecase) ListVehicles(userID string) ([]dto.VehicleResponse, error) {
@@ -35,7 +37,9 @@ func (u *vehicleUsecase) ListVehicles(userID string) ([]dto.VehicleResponse, err
 
 	responses := make([]dto.VehicleResponse, 0, len(vehicles))
 	for _, v := range vehicles {
-		responses = append(responses, toVehicleResponse(v))
+		res := toVehicleResponse(v)
+		res.TotalDistanceKM = u.calcTotalDistanceKM(v.ID)
+		responses = append(responses, res)
 	}
 
 	return responses, nil
@@ -61,6 +65,7 @@ func (u *vehicleUsecase) GetVehicleByID(id string, userID string) (*dto.VehicleR
 	}
 
 	res := toVehicleResponse(*vehicle)
+	res.TotalDistanceKM = u.calcTotalDistanceKM(vehicle.ID)
 	return &res, nil
 }
 
@@ -218,6 +223,14 @@ func (u *vehicleUsecase) SetDefaultVehicle(id string, userID string) (*dto.Vehic
 
 	res := toVehicleResponse(*vehicle)
 	return &res, nil
+}
+
+func (u *vehicleUsecase) calcTotalDistanceKM(vehicleID uuid.UUID) float64 {
+	totalMeters, err := u.tripRepo.SumDistanceByVehicleID(vehicleID)
+	if err != nil {
+		return 0
+	}
+	return math.Round((totalMeters/1000.0)*100) / 100
 }
 
 func toVehicleResponse(v models.Vehicle) dto.VehicleResponse {

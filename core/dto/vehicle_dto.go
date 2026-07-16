@@ -38,6 +38,7 @@ type VehicleResponse struct {
 	Year                    *int      `json:"year,omitempty"`
 	Photo                   *string   `json:"photo,omitempty"`
 	IsDefault               bool      `json:"is_default"`
+	TotalDistanceKM         float64   `json:"total_distance_km"`
 	FuelEfficiencyKmPerLiter *float64 `json:"fuel_efficiency_km_per_liter,omitempty"`
 	CreatedAt               time.Time `json:"created_at"`
 	UpdatedAt               time.Time `json:"updated_at"`

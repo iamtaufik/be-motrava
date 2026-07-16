@@ -117,7 +117,7 @@ func newUsecases(cfg config.Config, repos *repositories, logger *slog.Logger) *u
 	return &usecases{
 		authUsecase:            usecase.NewAuthUsecase(cfg, repos.userRepo, repos.refreshTokenRepo, logger),
 		userUsecase:            usecase.NewUserUsecase(repos.userRepo),
-		vehicleUsecase:         usecase.NewVehicleUsecase(repos.vehicleRepo),
+		vehicleUsecase:         usecase.NewVehicleUsecase(repos.vehicleRepo, repos.tripRepo),
 		tripUsecase:            usecase.NewTripUsecase(repos.tripRepo, repos.tripPointRepo, repos.vehicleRepo, repos.serviceReminderRepo, reminderNotifier),
 		serviceReminderUsecase: usecase.NewServiceReminderUsecase(repos.serviceReminderRepo, repos.manualDistanceLogRepo, repos.vehicleRepo, reminderNotifier),
 		deviceUsecase:          usecase.NewDeviceUsecase(repos.userDeviceRepo),

@@ -75,6 +75,20 @@ func (r *tripRepositoryGorm) FindByUserID(userID uuid.UUID, page, limit int, sea
 	return trips, total, nil
 }
 
+func (r *tripRepositoryGorm) SumDistanceByVehicleID(vehicleID uuid.UUID) (float64, error) {
+	var total struct {
+		Sum float64
+	}
+	if err := r.db.Model(&models.Trip{}).
+		Select("COALESCE(SUM(total_distance), 0) as sum").
+		Where("vehicle_id = ? AND status = ?", vehicleID, models.TripStatusCompleted).
+		Scan(&total).Error; err != nil {
+		r.log.Error("failed to sum trip distance", "module", "trip_repository", "error", err, "vehicle_id", vehicleID)
+		return 0, err
+	}
+	return total.Sum, nil
+}
+
 func (r *tripRepositoryGorm) Save(trip *models.Trip) error {
 	if err := r.db.Save(trip).Error; err != nil {
 		r.log.Error("failed to save trip", "module", "trip_repository", "error", err, "trip_id", trip.ID)
