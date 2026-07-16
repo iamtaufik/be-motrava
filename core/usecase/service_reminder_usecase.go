@@ -188,10 +188,30 @@ func (u *serviceReminderUsecase) AddManualDistance(userID string, vehicleID stri
 		return nil, fmt.Errorf("distance_km must be greater than 0")
 	}
 
+	vid, err := uuid.Parse(vehicleID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid vehicle id: %w", err)
+	}
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %w", err)
+	}
+
+	vehicle, err := u.vehicleRepo.FindByIDAndUserID(vid, uid)
+	if err != nil {
+		return nil, fmt.Errorf("vehicle not found")
+	}
+
+	delta := math.Round((input.DistanceKM-vehicle.LastRecordedOdometerKM)*100) / 100
+	if delta <= 0 {
+		return nil, fmt.Errorf("odometer input must be greater than last recorded odometer (%.2f KM)", vehicle.LastRecordedOdometerKM)
+	}
+
 	log := models.ManualDistanceLog{
 		ID:         uuid.New(),
 		ReminderID: reminder.ID,
-		DistanceKM: input.DistanceKM,
+		DistanceKM: delta,
 		Note:       input.Note,
 	}
 
@@ -199,13 +219,18 @@ func (u *serviceReminderUsecase) AddManualDistance(userID string, vehicleID stri
 		return nil, err
 	}
 
-	reminder.AccumulatedKM = math.Round(input.DistanceKM*100) / 100
+	reminder.AccumulatedKM = math.Round((reminder.AccumulatedKM+delta)*100) / 100
+	vehicle.LastRecordedOdometerKM = input.DistanceKM
 
 	if u.notifier != nil {
 		u.notifier.CheckAndNotify(reminder)
 	}
 
 	if err := u.reminderRepo.Save(reminder); err != nil {
+		return nil, err
+	}
+
+	if err := u.vehicleRepo.Save(vehicle); err != nil {
 		return nil, err
 	}
 

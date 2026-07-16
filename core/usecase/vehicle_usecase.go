@@ -91,7 +91,12 @@ func (u *vehicleUsecase) CreateVehicle(userID string, input dto.CreateVehicleReq
 		Color:                   strings.TrimSpace(input.Color),
 		Year:                    input.Year,
 		FuelEfficiencyKmPerLiter: input.FuelEfficiencyKmPerLiter,
+		InitialKM:               input.InitialKM,
 		IsDefault:               false,
+	}
+
+	if input.InitialKM != nil {
+		vehicle.LastRecordedOdometerKM = *input.InitialKM
 	}
 
 	if photo := strings.TrimSpace(input.Photo); photo != "" {
@@ -235,19 +240,21 @@ func (u *vehicleUsecase) calcTotalDistanceKM(vehicleID uuid.UUID) float64 {
 
 func toVehicleResponse(v models.Vehicle) dto.VehicleResponse {
 	return dto.VehicleResponse{
-		ID:                       v.ID.String(),
-		UserID:                   v.UserID.String(),
-		VehicleName:              v.VehicleName,
-		PlateNumber:              v.PlateNumber,
-		Brand:                    v.Brand,
-		Model:                    v.Model,
-		VehicleType:              v.VehicleType,
-		Color:                    v.Color,
-		Year:                     v.Year,
-		Photo:                    v.Photo,
-		IsDefault:                v.IsDefault,
+		ID:                      v.ID.String(),
+		UserID:                  v.UserID.String(),
+		VehicleName:             v.VehicleName,
+		PlateNumber:             v.PlateNumber,
+		Brand:                   v.Brand,
+		Model:                   v.Model,
+		VehicleType:             v.VehicleType,
+		Color:                   v.Color,
+		Year:                    v.Year,
+		Photo:                   v.Photo,
+		IsDefault:               v.IsDefault,
+		InitialKM:               v.InitialKM,
+		LastRecordedOdometerKM:  v.LastRecordedOdometerKM,
 		FuelEfficiencyKmPerLiter: v.FuelEfficiencyKmPerLiter,
-		CreatedAt:                v.CreatedAt,
-		UpdatedAt:                v.UpdatedAt,
+		CreatedAt:               v.CreatedAt,
+		UpdatedAt:               v.UpdatedAt,
 	}
 }

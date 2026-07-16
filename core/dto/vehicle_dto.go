@@ -12,6 +12,7 @@ type CreateVehicleRequest struct {
 	Year                    *int     `json:"year,omitempty"`
 	Photo                   string   `json:"photo,omitempty"`
 	FuelEfficiencyKmPerLiter *float64 `json:"fuel_efficiency_km_per_liter,omitempty"`
+	InitialKM               *float64 `json:"initial_km,omitempty"`
 }
 
 type UpdateVehicleRequest struct {
@@ -39,6 +40,8 @@ type VehicleResponse struct {
 	Photo                   *string   `json:"photo,omitempty"`
 	IsDefault               bool      `json:"is_default"`
 	TotalDistanceKM         float64   `json:"total_distance_km"`
+	InitialKM               *float64  `json:"initial_km,omitempty"`
+	LastRecordedOdometerKM  float64   `json:"last_recorded_odometer_km"`
 	FuelEfficiencyKmPerLiter *float64 `json:"fuel_efficiency_km_per_liter,omitempty"`
 	CreatedAt               time.Time `json:"created_at"`
 	UpdatedAt               time.Time `json:"updated_at"`

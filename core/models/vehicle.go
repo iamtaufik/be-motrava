@@ -26,7 +26,9 @@ type Vehicle struct {
 	Year                    *int           `json:"year,omitempty"`
 	Photo                   *string        `gorm:"type:text" json:"photo,omitempty"`
 	FuelEfficiencyKmPerLiter *float64       `gorm:"type:double precision" json:"fuel_efficiency_km_per_liter,omitempty"`
-	IsDefault   bool           `gorm:"not null;default:false" json:"is_default"`
+	InitialKM               *float64       `gorm:"type:double precision" json:"initial_km,omitempty"`
+	LastRecordedOdometerKM  float64        `gorm:"not null;default:0" json:"last_recorded_odometer_km"`
+	IsDefault               bool           `gorm:"not null;default:false" json:"is_default"`
 	CreatedAt   time.Time      `gorm:"not null;autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"not null;autoUpdateTime" json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`

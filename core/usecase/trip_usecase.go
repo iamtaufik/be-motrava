@@ -272,14 +272,20 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 		trip.AverageSpeed = math.Round(avgSpeed*100) / 100
 	}
 
-	// Calculate estimated fuel consumed
+	// Calculate estimated fuel consumed and update odometer
 	if trip.TotalDistance > 0 {
 		vehicle, err := u.vehicleRepo.FindByIDAndUserID(trip.VehicleID, uid)
-		if err == nil && vehicle != nil && vehicle.FuelEfficiencyKmPerLiter != nil && *vehicle.FuelEfficiencyKmPerLiter > 0 {
-			distanceKm := trip.TotalDistance / 1000.0
-			consumed := distanceKm / *vehicle.FuelEfficiencyKmPerLiter
-			consumed = math.Round(consumed*100) / 100
-			trip.FuelConsumed = &consumed
+		if err == nil && vehicle != nil {
+			if vehicle.FuelEfficiencyKmPerLiter != nil && *vehicle.FuelEfficiencyKmPerLiter > 0 {
+				distanceKm := trip.TotalDistance / 1000.0
+				consumed := distanceKm / *vehicle.FuelEfficiencyKmPerLiter
+				consumed = math.Round(consumed*100) / 100
+				trip.FuelConsumed = &consumed
+			}
+
+			tripKM := math.Round((trip.TotalDistance/1000.0)*100) / 100
+			vehicle.LastRecordedOdometerKM = math.Round((vehicle.LastRecordedOdometerKM+tripKM)*100) / 100
+			u.vehicleRepo.Save(vehicle)
 		}
 	}
 
