@@ -11,4 +11,5 @@ type TripUsecase interface {
 	EndTrip(userID string, tripID string) (*dto.TripResponse, error)
 	GetTripHistory(userID string, req dto.TripHistoryRequest) ([]dto.TripHistoryItem, *dto.PaginationMeta, error)
 	GetTripDetail(userID string, tripID string) (*dto.TripDetailResponse, error)
+	DeleteTrip(userID string, tripID string) error
 }

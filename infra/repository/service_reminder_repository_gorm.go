@@ -73,6 +73,24 @@ func (r *serviceReminderRepositoryGorm) Save(reminder *models.ServiceReminder) e
 	return nil
 }
 
+func (r *serviceReminderRepositoryGorm) DeleteByVehicleID(vehicleID uuid.UUID) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var reminderIDs []uuid.UUID
+		if err := tx.Model(&models.ServiceReminder{}).Where("vehicle_id = ?", vehicleID).Pluck("id", &reminderIDs).Error; err != nil {
+			return err
+		}
+		if len(reminderIDs) > 0 {
+			if err := tx.Where("reminder_id IN ?", reminderIDs).Delete(&models.ManualDistanceLog{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("id IN ?", reminderIDs).Delete(&models.ServiceReminder{}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (r *serviceReminderRepositoryGorm) Delete(id uuid.UUID) error {
 	if err := r.db.Delete(&models.ServiceReminder{}, id).Error; err != nil {
 		r.log.Error("failed to delete service reminder", "module", "service_reminder_repository", "error", err, "reminder_id", id)
@@ -106,4 +124,12 @@ func (r *manualDistanceLogRepositoryGorm) FindByReminderID(reminderID uuid.UUID)
 		return nil, err
 	}
 	return logs, nil
+}
+
+func (r *manualDistanceLogRepositoryGorm) DeleteByReminderID(reminderID uuid.UUID) error {
+	if err := r.db.Where("reminder_id = ?", reminderID).Delete(&models.ManualDistanceLog{}).Error; err != nil {
+		r.log.Error("failed to delete manual distance logs by reminder", "module", "manual_distance_log_repository", "error", err, "reminder_id", reminderID)
+		return err
+	}
+	return nil
 }

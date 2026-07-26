@@ -18,11 +18,21 @@ import (
 var _ portUsecase.VehicleUsecase = (*vehicleUsecase)(nil)
 
 type vehicleUsecase struct {
-	vehicleRepo repository.VehicleRepository
+	vehicleRepo  repository.VehicleRepository
+	tripRepo     repository.TripRepository
+	reminderRepo repository.ServiceReminderRepository
 }
 
-func NewVehicleUsecase(vehicleRepo repository.VehicleRepository) portUsecase.VehicleUsecase {
-	return &vehicleUsecase{vehicleRepo: vehicleRepo}
+func NewVehicleUsecase(
+	vehicleRepo repository.VehicleRepository,
+	tripRepo repository.TripRepository,
+	reminderRepo repository.ServiceReminderRepository,
+) portUsecase.VehicleUsecase {
+	return &vehicleUsecase{
+		vehicleRepo:  vehicleRepo,
+		tripRepo:     tripRepo,
+		reminderRepo: reminderRepo,
+	}
 }
 
 func (u *vehicleUsecase) ListVehicles(userID string) ([]dto.VehicleResponse, error) {
@@ -189,6 +199,25 @@ func (u *vehicleUsecase) DeleteVehicle(id string, userID string) error {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return fmt.Errorf("invalid user id: %w", err)
+	}
+
+	vehicle, err := u.vehicleRepo.FindByIDAndUserID(vid, uid)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("record not found")
+		}
+		return err
+	}
+	if vehicle == nil {
+		return fmt.Errorf("record not found")
+	}
+
+	if err := u.tripRepo.DeleteByVehicleID(vid); err != nil {
+		return err
+	}
+
+	if err := u.reminderRepo.DeleteByVehicleID(vid); err != nil {
+		return err
 	}
 
 	if err := u.vehicleRepo.Delete(vid, uid); err != nil {

@@ -89,6 +89,45 @@ func (r *tripRepositoryGorm) SumDistanceByVehicleID(vehicleID uuid.UUID) (float6
 	return total.Sum, nil
 }
 
+func (r *tripRepositoryGorm) FindByVehicleID(vehicleID uuid.UUID) ([]models.Trip, error) {
+	var trips []models.Trip
+	if err := r.db.Where("vehicle_id = ?", vehicleID).Find(&trips).Error; err != nil {
+		r.log.Error("failed to query trips by vehicle", "module", "trip_repository", "error", err, "vehicle_id", vehicleID)
+		return nil, err
+	}
+	return trips, nil
+}
+
+func (r *tripRepositoryGorm) Delete(id uuid.UUID) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("trip_id = ?", id).Delete(&models.TripPoint{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&models.Trip{}, id).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (r *tripRepositoryGorm) DeleteByVehicleID(vehicleID uuid.UUID) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var tripIDs []uuid.UUID
+		if err := tx.Model(&models.Trip{}).Where("vehicle_id = ?", vehicleID).Pluck("id", &tripIDs).Error; err != nil {
+			return err
+		}
+		if len(tripIDs) > 0 {
+			if err := tx.Where("trip_id IN ?", tripIDs).Delete(&models.TripPoint{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("id IN ?", tripIDs).Delete(&models.Trip{}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (r *tripRepositoryGorm) Save(trip *models.Trip) error {
 	if err := r.db.Save(trip).Error; err != nil {
 		r.log.Error("failed to save trip", "module", "trip_repository", "error", err, "trip_id", trip.ID)
@@ -137,4 +176,12 @@ func (r *tripPointRepositoryGorm) CountByTripID(tripID uuid.UUID) (int64, error)
 		return 0, err
 	}
 	return count, nil
+}
+
+func (r *tripPointRepositoryGorm) DeleteByTripID(tripID uuid.UUID) error {
+	if err := r.db.Where("trip_id = ?", tripID).Delete(&models.TripPoint{}).Error; err != nil {
+		r.log.Error("failed to delete trip points by trip", "module", "trip_point_repository", "error", err, "trip_id", tripID)
+		return err
+	}
+	return nil
 }

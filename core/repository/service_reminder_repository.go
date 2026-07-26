@@ -14,9 +14,11 @@ type ServiceReminderRepository interface {
 	Create(reminder *models.ServiceReminder) error
 	Save(reminder *models.ServiceReminder) error
 	Delete(id uuid.UUID) error
+	DeleteByVehicleID(vehicleID uuid.UUID) error
 }
 
 type ManualDistanceLogRepository interface {
 	Create(log *models.ManualDistanceLog) error
 	FindByReminderID(reminderID uuid.UUID) ([]models.ManualDistanceLog, error)
+	DeleteByReminderID(reminderID uuid.UUID) error
 }

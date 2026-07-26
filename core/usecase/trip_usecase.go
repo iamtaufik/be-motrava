@@ -409,6 +409,36 @@ func toTripResponse(t models.Trip) dto.TripResponse {
 	}
 }
 
+func (u *tripUsecase) DeleteTrip(userID string, tripID string) error {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+
+	tid, err := uuid.Parse(tripID)
+	if err != nil {
+		return fmt.Errorf("invalid trip id: %w", err)
+	}
+
+	trip, err := u.tripRepo.FindByID(tid)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("trip not found")
+		}
+		return err
+	}
+
+	if trip.UserID != uid {
+		return fmt.Errorf("trip not found")
+	}
+
+	if err := u.tripRepo.Delete(tid); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func haversine(lat1, lon1, lat2, lon2 float64) float64 {
 	dLat := (lat2 - lat1) * math.Pi / 180.0
 	dLon := (lon2 - lon1) * math.Pi / 180.0

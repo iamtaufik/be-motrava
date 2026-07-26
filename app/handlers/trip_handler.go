@@ -134,3 +134,25 @@ func (h *TripHandler) GetTripHistory(c *fiber.Ctx) error {
 		Meta:    meta,
 	})
 }
+
+func (h *TripHandler) DeleteTrip(c *fiber.Ctx) error {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return response.Error(c, fiber.StatusUnauthorized, "unauthorized", nil)
+	}
+
+	err := h.tripUsecase.DeleteTrip(user.ID.String(), c.Params("id"))
+	if err != nil {
+		h.log.Error("delete trip failed", "module", "trip_handler", "error", err)
+		msg := err.Error()
+		if strings.Contains(msg, "trip not found") {
+			return response.Error(c, fiber.StatusNotFound, msg, nil)
+		}
+		if strings.Contains(msg, "invalid trip id") {
+			return response.ValidationError(c, fiber.Map{"id": "must be a valid UUID"})
+		}
+		return response.Error(c, fiber.StatusInternalServerError, "failed to delete trip", nil)
+	}
+
+	return response.OK(c, "trip deleted", nil)
+}

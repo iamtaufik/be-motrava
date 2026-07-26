@@ -86,6 +86,7 @@ func (r *Router) SetupRouters() {
 	trip.Get("/:id", r.handlers.TripHandler.GetTripDetail)
 	trip.Post("/start", r.handlers.TripHandler.StartTrip)
 	trip.Post("/:id/end", r.handlers.TripHandler.EndTrip)
+	trip.Delete("/:id", r.handlers.TripHandler.DeleteTrip)
 
 	api.Get("/ws/trip/location", r.handlers.WSHandler.Upgrade)
 
