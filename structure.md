@@ -68,6 +68,7 @@
 │           └── response.go
 ├── docker-compose.yml
 ├── go.mod
+├── go.sum
 ├── infra
 │   ├── database
 │   │   ├── gorm.go
@@ -86,12 +87,13 @@
 │   │   └── vehicle_repository_gorm.go
 │   └── ws
 │       └── hub.go
+├── log.json
 ├── migrations
 │   ├── 001_create_vehicle_table.sql
 │   ├── 002_create_trip_tables.sql
-│   └── 003_create_service_reminder_tables.sql
+│   ├── 003_add_fuel_columns.sql
+│   ├── 003_create_service_reminder_tables.sql
+│   └── 004_add_odometer_columns.sql
 ├── mvp.md
-├── structure.md
-└── trip-management.postman_collection.json
-
-23 directories, 50 files
+├── service-account.json
+└── structure.md

@@ -14,9 +14,9 @@ import (
 	"motrava/app/middleware"
 	"motrava/app/routes"
 	"motrava/config"
+	portUsecase "motrava/core/port/usecase"
 	"motrava/core/repository"
 	"motrava/core/usecase"
-	portUsecase "motrava/core/port/usecase"
 	"motrava/infra/database"
 	fcmInfra "motrava/infra/fcm"
 	infraRepo "motrava/infra/repository"
@@ -69,7 +69,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 	wsHub := wsInfra.NewHub(logger, rdb, repos.tripPointRepo)
 	authMiddleware := middleware.AuthMiddleware(cfg, repos.userRepo, logger)
 
-	usecase.StartReminderScheduler(30*time.Minute, useCases.reminderNotifier, repos.serviceReminderRepo)
+	usecase.StartReminderScheduler(30*time.Second, useCases.reminderNotifier, repos.serviceReminderRepo)
 
 	routes.NewRoutes(fiberApp, logger, routes.Handlers{
 		AuthHandler:            handlers.NewAuthHandler(useCases.authUsecase, logger),
