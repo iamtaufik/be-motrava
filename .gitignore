@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+service-account.json
 
 # Logs
 log.json
@@ -28,3 +29,6 @@ Thumbs.db
 # Dependency / cache
 vendor/
 .air.toml
+
+# Other
+tmp/

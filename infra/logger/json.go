@@ -55,11 +55,6 @@ func NewJSONFileLogger(filePath string) (*slog.Logger, *os.File, error) {
 		},
 	}
 
-	if err := handler.persistLocked(); err != nil {
-		_ = file.Close()
-		return nil, nil, err
-	}
-
 	return slog.New(handler), file, nil
 }
 
@@ -122,7 +117,25 @@ func (h *arrayJSONHandler) Handle(_ context.Context, record slog.Record) error {
 	defer h.state.mu.Unlock()
 
 	h.state.logs = append(h.state.logs, entry)
-	return h.persistLocked()
+
+	payload, err := json.Marshal(entry)
+	if err != nil {
+		return fmt.Errorf("marshal log entry: %w", err)
+	}
+
+	if _, err := h.state.file.Seek(0, 2); err != nil {
+		return fmt.Errorf("seek log file: %w", err)
+	}
+
+	if _, err := h.state.file.Write(payload); err != nil {
+		return fmt.Errorf("write log entry: %w", err)
+	}
+
+	if _, err := h.state.file.Write([]byte("\n")); err != nil {
+		return fmt.Errorf("write newline: %w", err)
+	}
+
+	return h.state.file.Sync()
 }
 
 func (h *arrayJSONHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
@@ -167,35 +180,6 @@ func addAttrToMap(data map[string]interface{}, groups []string, attr slog.Attr) 
 	}
 
 	data[key] = attr.Value.Any()
-}
-
-func (h *arrayJSONHandler) persistLocked() error {
-	if err := h.state.file.Truncate(0); err != nil {
-		return fmt.Errorf("truncate log file: %w", err)
-	}
-
-	if _, err := h.state.file.Seek(0, 0); err != nil {
-		return fmt.Errorf("seek log file: %w", err)
-	}
-
-	payload, err := json.MarshalIndent(h.state.logs, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal log array: %w", err)
-	}
-
-	if len(payload) == 0 {
-		payload = []byte("[]")
-	}
-
-	if _, err := h.state.file.Write(payload); err != nil {
-		return fmt.Errorf("write log file: %w", err)
-	}
-
-	if _, err := h.state.file.Write([]byte("\n")); err != nil {
-		return fmt.Errorf("write log newline: %w", err)
-	}
-
-	return h.state.file.Sync()
 }
 
 func recordCaller(record slog.Record) string {

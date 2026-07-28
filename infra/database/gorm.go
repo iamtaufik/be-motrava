@@ -29,7 +29,7 @@ func AutoMigrate(db *gorm.DB, logger *slog.Logger) error {
 	}
 
 	logger.Info("running database automigrate", "module", "database")
-	err := db.AutoMigrate(&models.User{})
+	err := db.AutoMigrate(&models.User{}, &models.RefreshToken{}, &models.Vehicle{}, &models.Trip{}, &models.TripPoint{})
 	if err != nil {
 		logger.Error("database automigrate failed", "module", "database", "error", err)
 		return err

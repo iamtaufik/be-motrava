@@ -5,6 +5,8 @@ services:
       - "3002:3002"
     env_file:
       - ./.env
+    volumes:
+      - /opt/motrava/config/service-account.json:/app/service-account.json:ro
     networks:
       - shared_network
 
