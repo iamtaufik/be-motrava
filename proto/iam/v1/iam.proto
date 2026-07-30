@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package iam.v1;
+
+option go_package = "motrava/proto/gen/iam/v1;iamv1";
+
+service IAMService {
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserResponse);
+  rpc GetUserByGoogleSub(GetUserByGoogleSubRequest) returns (GetUserResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string email = 3;
+  string full_name = 4;
+  string auth_provider = 5;
+  string avatar_url = 6;
+  bool is_active = 7;
+  bool is_verified = 8;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUserByGoogleSubRequest {
+  string google_sub = 1;
+}
+
+message GetUserResponse {
+  string user_id = 1;
+  string email = 2;
+  string full_name = 3;
+  string auth_provider = 4;
+  string google_sub = 5;
+  string avatar_url = 6;
+  string phone_number = 7;
+  bool is_active = 8;
+  bool is_verified = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}

@@ -1,15 +1,53 @@
 services:
-  be-motrava:
-    build: .
+  caddy:
+    image: caddy:2-alpine
     ports:
-      - "3002:3002"
+      - "4005:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - shared_network
+
+  iam-service:
+    build:
+      context: .
+      dockerfile: iam-service/Dockerfile
+    expose:
+      - "3001"
     env_file:
       - ./.env
+    environment:
+      - APP_PORT=3001
+      - GRPC_PORT=50051
     volumes:
       - /opt/motrava/config/service-account.json:/app/service-account.json:ro
+    networks:
+      - shared_network
+
+  core-service:
+    build:
+      context: .
+      dockerfile: core-service/Dockerfile
+    expose:
+      - "3002"
+    env_file:
+      - ./.env
+    environment:
+      - APP_PORT=3002
+      - IAM_SERVICE_ADDRESS=iam-service:50051
+    volumes:
+      - /opt/motrava/config/service-account.json:/app/service-account.json:ro
+    depends_on:
+      - iam-service
     networks:
       - shared_network
 
 networks:
   shared_network:
     external: true
+
+volumes:
+  caddy_data:
+  caddy_config:
