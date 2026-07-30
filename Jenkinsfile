@@ -5,7 +5,6 @@ pipeline {
         COMPOSE_PROJECT_NAME = "be-motrava"
     }
 
-
     options {
         disableConcurrentBuilds()
     }
@@ -20,7 +19,7 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Docker Images') {
             steps {
                 withCredentials([
                     file(credentialsId: 'BE_MOTRAVA_ENVIRONMENT', variable: 'ENV_FILE')
@@ -28,7 +27,8 @@ pipeline {
                     sh '''
                     cp $ENV_FILE ./.env
 
-                    docker compose build be-motrava
+                    docker compose build iam-service
+                    docker compose build core-service
                     '''
                 }
             }
@@ -37,8 +37,8 @@ pipeline {
         stage('Remove old containers') {
             steps {
                 sh '''
-                docker compose stop be-motrava || true
-                docker compose rm -f be-motrava || true
+                docker compose stop iam-service core-service || true
+                docker compose rm -f iam-service core-service || true
                 '''
             }
         }
@@ -46,20 +46,9 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 sh '''
-                docker compose up -d be-motrava
+                docker compose up -d iam-service core-service
                 '''
             }
         }
-
-        // stage('Cleanup') {
-        //     steps {
-        //         sh '''
-        //         docker images "hk-backend" \
-        //         --format "{{.Tag}}" \
-        //         | tail -n +2 \
-        //         | xargs -r -I {} docker rmi hk-backend:{} || true
-        //         '''
-        //     }
-        // }
     }
 }

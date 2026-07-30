@@ -1,0 +1,5 @@
+be-motrava.taufikdev.net {
+    reverse_proxy /api/auth/* iam-service:3001
+    reverse_proxy /api/health iam-service:3001
+    reverse_proxy /api/* core-service:3002
+}
