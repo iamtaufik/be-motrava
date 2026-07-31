@@ -37,8 +37,7 @@ pipeline {
         stage('Remove old containers') {
             steps {
                 sh '''
-                docker compose stop iam-service core-service || true
-                docker compose rm -f iam-service core-service || true
+                docker compose down --remove-orphans || true
                 '''
             }
         }
@@ -46,7 +45,7 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 sh '''
-                docker compose up -d iam-service core-service caddy
+                docker compose up -d --remove-orphans iam-service core-service caddy
                 '''
             }
         }
