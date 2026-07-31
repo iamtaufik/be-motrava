@@ -29,6 +29,7 @@ pipeline {
 
                     docker compose build iam-service
                     docker compose build core-service
+                    docker compose build caddy
                     '''
                 }
             }
