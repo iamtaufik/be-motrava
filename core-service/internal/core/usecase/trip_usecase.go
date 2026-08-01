@@ -21,10 +21,10 @@ const (
 )
 
 type tripUsecase struct {
-	tripRepo        repository.TripRepository
-	tripPointRepo   repository.TripPointRepository
-	vehicleRepo     repository.VehicleRepository
-	reminderRepo    repository.ServiceReminderRepository
+	tripRepo         repository.TripRepository
+	tripPointRepo    repository.TripPointRepository
+	vehicleRepo      repository.VehicleRepository
+	reminderRepo     repository.ServiceReminderRepository
 	reminderNotifier *ReminderNotifier
 }
 
@@ -36,10 +36,10 @@ func NewTripUsecase(
 	reminderNotifier *ReminderNotifier,
 ) portUsecase.TripUsecase {
 	return &tripUsecase{
-		tripRepo:        tripRepo,
-		tripPointRepo:   tripPointRepo,
-		vehicleRepo:     vehicleRepo,
-		reminderRepo:    reminderRepo,
+		tripRepo:         tripRepo,
+		tripPointRepo:    tripPointRepo,
+		vehicleRepo:      vehicleRepo,
+		reminderRepo:     reminderRepo,
 		reminderNotifier: reminderNotifier,
 	}
 }
@@ -186,6 +186,87 @@ func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models
 	trip.EndLongitude = &point.Longitude
 
 	return u.tripRepo.Save(trip)
+}
+
+func (u *tripUsecase) BatchLocations(userID string, tripID string, input []dto.BatchLocationRequest) (*dto.BatchLocationResponse, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %w", err)
+	}
+
+	tid, err := uuid.Parse(tripID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid trip id: %w", err)
+	}
+
+	if len(input) == 0 {
+		return nil, fmt.Errorf("invalid location payload or empty array")
+	}
+
+	trip, err := u.tripRepo.FindByID(tid)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("trip not found")
+		}
+		return nil, err
+	}
+
+	if trip.UserID != uid {
+		return nil, fmt.Errorf("trip not found")
+	}
+
+	points := make([]models.TripPoint, len(input))
+	for i, item := range input {
+		if item.Latitude < -90 || item.Latitude > 90 || item.Longitude < -180 || item.Longitude > 180 || item.Speed < 0 {
+			return nil, fmt.Errorf("invalid location payload or empty array")
+		}
+		if item.Battery < 0 || item.Battery > 100 {
+			return nil, fmt.Errorf("invalid location payload or empty array")
+		}
+		if item.Heading < 0 || item.Heading > 360 {
+			return nil, fmt.Errorf("invalid location payload or empty array")
+		}
+
+		recordedAt, err := time.Parse(time.RFC3339, item.Timestamp)
+		if err != nil {
+			return nil, fmt.Errorf("invalid location payload or empty array")
+		}
+
+		points[i] = models.TripPoint{
+			ID:         uuid.New(),
+			TripID:     tid,
+			Latitude:   item.Latitude,
+			Longitude:  item.Longitude,
+			Speed:      item.Speed,
+			Heading:    item.Heading,
+			Accuracy:   item.Accuracy,
+			Altitude:   item.Altitude,
+			Battery:    item.Battery,
+			RecordedAt: recordedAt.UTC(),
+		}
+	}
+
+	if err := u.tripPointRepo.CreateBatch(points); err != nil {
+		return nil, err
+	}
+
+	allPoints, err := u.tripPointRepo.FindAllByTripID(tid)
+	if err != nil {
+		return nil, err
+	}
+	if len(allPoints) > 0 {
+		trip.StartLatitude = allPoints[0].Latitude
+		trip.StartLongitude = allPoints[0].Longitude
+		endLat := allPoints[len(allPoints)-1].Latitude
+		endLon := allPoints[len(allPoints)-1].Longitude
+		trip.EndLatitude = &endLat
+		trip.EndLongitude = &endLon
+		if err := u.tripRepo.Save(trip); err != nil {
+			return nil, err
+		}
+	}
+
+	return &dto.BatchLocationResponse{ProcessedCount: len(points), TripID: tid.String()}, nil
 }
 
 func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, error) {

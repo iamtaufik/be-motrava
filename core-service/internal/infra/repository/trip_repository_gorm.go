@@ -154,6 +154,17 @@ func (r *tripPointRepositoryGorm) Create(point *models.TripPoint) error {
 	return nil
 }
 
+func (r *tripPointRepositoryGorm) CreateBatch(points []models.TripPoint) error {
+	if len(points) == 0 {
+		return nil
+	}
+	if err := r.db.Create(&points).Error; err != nil {
+		r.log.Error("failed to create trip points", "module", "trip_point_repository", "error", err)
+		return err
+	}
+	return nil
+}
+
 func (r *tripPointRepositoryGorm) FindAllByTripID(tripID uuid.UUID) ([]models.TripPoint, error) {
 	var points []models.TripPoint
 	if err := r.db.Where("trip_id = ?", tripID).Order("recorded_at asc").Find(&points).Error; err != nil {

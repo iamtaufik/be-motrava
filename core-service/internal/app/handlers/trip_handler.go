@@ -57,6 +57,33 @@ func (h *TripHandler) StartTrip(c *fiber.Ctx) error {
 	return response.Created(c, "trip started", trip)
 }
 
+func (h *TripHandler) BatchLocations(c *fiber.Ctx) error {
+	user, ok := middleware.CurrentUser(c)
+	if !ok {
+		return response.Error(c, fiber.StatusUnauthorized, "unauthorized", nil)
+	}
+
+	var req []dto.BatchLocationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.Error(c, fiber.StatusBadRequest, "Invalid location payload or empty array", nil)
+	}
+
+	res, err := h.tripUsecase.BatchLocations(user.ID.String(), c.Params("id"), req)
+	if err != nil {
+		h.log.Error("batch locations failed", "module", "trip_handler", "error", err)
+		msg := err.Error()
+		if strings.Contains(msg, "trip not found") {
+			return response.Error(c, fiber.StatusNotFound, "Trip not found", nil)
+		}
+		if strings.Contains(msg, "invalid location payload") || strings.Contains(msg, "invalid trip id") {
+			return response.Error(c, fiber.StatusBadRequest, "Invalid location payload or empty array", nil)
+		}
+		return response.Error(c, fiber.StatusInternalServerError, "failed to record batch locations", nil)
+	}
+
+	return response.OK(c, "Batch locations recorded successfully", res)
+}
+
 func (h *TripHandler) EndTrip(c *fiber.Ctx) error {
 	user, ok := middleware.CurrentUser(c)
 	if !ok {

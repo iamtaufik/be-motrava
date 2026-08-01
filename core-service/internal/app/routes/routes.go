@@ -74,6 +74,7 @@ func (r *Router) SetupRouters() {
 	trip.Get("/", r.handlers.TripHandler.GetTripHistory)
 	trip.Get("/:id", r.handlers.TripHandler.GetTripDetail)
 	trip.Post("/start", r.handlers.TripHandler.StartTrip)
+	trip.Post("/:id/locations/batch", r.handlers.TripHandler.BatchLocations)
 	trip.Post("/:id/end", r.handlers.TripHandler.EndTrip)
 	trip.Delete("/:id", r.handlers.TripHandler.DeleteTrip)
 
