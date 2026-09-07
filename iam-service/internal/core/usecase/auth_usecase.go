@@ -130,7 +130,7 @@ func (u *googleAuthUsecase) Register(ctx context.Context, req dto.AuthRegisterRe
 		return nil, err
 	}
 
-	return u.issueAuthResponse(user)
+	return u.issueAuthResponse(user, "")
 }
 
 func (u *googleAuthUsecase) Login(ctx context.Context, req dto.AuthLoginRequest) (*dto.AuthResponse, error) {
@@ -157,7 +157,7 @@ func (u *googleAuthUsecase) Login(ctx context.Context, req dto.AuthLoginRequest)
 	}
 
 	user.AuthProvider = models.AuthProviderLocal
-	return u.issueAuthResponse(user)
+	return u.issueAuthResponse(user, "")
 }
 
 func (u *googleAuthUsecase) Refresh(ctx context.Context, refreshToken string) (*dto.AuthResponse, error) {
@@ -184,16 +184,20 @@ func (u *googleAuthUsecase) Refresh(ctx context.Context, refreshToken string) (*
 		return nil, portUsecase.ErrInvalidRefreshToken
 	}
 
-	if err := u.refreshTokenRepo.RevokeByHash(tokenHash); err != nil {
-		return nil, err
-	}
-
 	user, err := u.userRepo.FindByID(storedToken.UserID)
 	if err != nil {
 		return nil, err
 	}
 
-	return u.issueAuthResponse(user)
+	resp, err := u.issueAuthResponse(user, tokenHash)
+	if err != nil {
+		if errors.Is(err, repository.ErrRefreshTokenReuse) {
+			return nil, portUsecase.ErrInvalidRefreshToken
+		}
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (u *googleAuthUsecase) Me(ctx context.Context, accessToken string) (*dto.UserResponse, error) {
@@ -293,10 +297,13 @@ func (u *googleAuthUsecase) HandleGoogleMobileLogin(ctx context.Context, idToken
 		return nil, err
 	}
 
-	return u.issueAuthResponse(user)
+	return u.issueAuthResponse(user, "")
 }
 
-func (u *googleAuthUsecase) issueAuthResponse(user *models.User) (*dto.AuthResponse, error) {
+// issueAuthResponse issues a new access/refresh token pair. When revokeHash
+// is non-empty the stored token with that hash is revoked and the new refresh
+// token is created atomically (rotation with reuse detection).
+func (u *googleAuthUsecase) issueAuthResponse(user *models.User, revokeHash string) (*dto.AuthResponse, error) {
 	now := time.Now().UTC()
 	user.LastLoginAt = &now
 	if err := u.userRepo.Save(user); err != nil {
@@ -320,8 +327,14 @@ func (u *googleAuthUsecase) issueAuthResponse(user *models.User) (*dto.AuthRespo
 		ExpiresAt: refreshClaims.ExpiresAt.Time,
 	}
 
-	if err := u.refreshTokenRepo.Create(refreshRecord); err != nil {
-		return nil, err
+	if revokeHash == "" {
+		if err := u.refreshTokenRepo.Create(refreshRecord); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := u.refreshTokenRepo.Rotate(revokeHash, refreshRecord); err != nil {
+			return nil, err
+		}
 	}
 
 	return &dto.AuthResponse{

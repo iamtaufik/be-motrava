@@ -25,10 +25,11 @@ import (
 )
 
 type Application struct {
-	fiber *fiber.App
-	rdb   *redis.Client
-	cfg   config.Config
-	log   *slog.Logger
+	fiber     *fiber.App
+	rdb       *redis.Client
+	cfg       config.Config
+	log       *slog.Logger
+	scheduler *usecase.ReminderScheduler
 }
 
 type repositories struct {
@@ -71,7 +72,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 	wsHub := wsInfra.NewHub(logger, rdb, repos.tripPointRepo)
 	authMiddleware := middleware.CoreAuthMiddleware(cfg, iamClient, logger)
 
-	usecase.StartReminderScheduler(30*time.Second, useCases.reminderNotifier, repos.serviceReminderRepo)
+	scheduler := usecase.StartReminderScheduler(30*time.Second, useCases.reminderNotifier, repos.serviceReminderRepo)
 
 	routes.NewRoutes(fiberApp, logger, routes.Handlers{
 		VehicleHandler:         handlers.NewVehicleHandler(useCases.vehicleUsecase, logger),
@@ -84,10 +85,11 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 	logger.Info("core application modules wired", "module", "core_app")
 
 	return &Application{
-		fiber: fiberApp,
-		rdb:   rdb,
-		cfg:   cfg,
-		log:   logger,
+		fiber:     fiberApp,
+		rdb:       rdb,
+		cfg:       cfg,
+		log:       logger,
+		scheduler: scheduler,
 	}, nil
 }
 
@@ -127,6 +129,11 @@ func (a *Application) Run() error {
 
 func (a *Application) Shutdown(ctx context.Context) error {
 	a.log.Info("shutting down core service", "module", "core_app")
+
+	if a.scheduler != nil {
+		a.scheduler.Stop()
+	}
+
 	if err := a.rdb.Close(); err != nil {
 		a.log.Error("redis close error", "module", "core_app", "error", err)
 	}

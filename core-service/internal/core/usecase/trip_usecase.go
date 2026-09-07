@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,12 +21,59 @@ const (
 	earthRadiusKm        = 6371.0
 )
 
+// tripLocks provides one mutex per trip ID so trip mutations (location
+// writes, coordinate updates, trip finalization) are serialized per trip.
+type tripLocks struct {
+	mu    sync.Mutex
+	locks map[uuid.UUID]*sync.Mutex
+}
+
+func newTripLocks() *tripLocks {
+	return &tripLocks{locks: make(map[uuid.UUID]*sync.Mutex)}
+}
+
+// Lock acquires the mutex for the given trip and returns a release func.
+func (t *tripLocks) Lock(id uuid.UUID) func() {
+	for {
+		t.mu.Lock()
+		m, ok := t.locks[id]
+		if !ok {
+			m = &sync.Mutex{}
+			t.locks[id] = m
+		}
+		t.mu.Unlock()
+
+		m.Lock()
+
+		t.mu.Lock()
+		if t.locks[id] == m {
+			t.mu.Unlock()
+			return func() {
+				// Remove the entry so the map stays bounded, but only while
+				// we still own it; a waiter that already grabbed this mutex
+				// re-validates the map entry after locking (see below).
+				t.mu.Lock()
+				if t.locks[id] == m {
+					delete(t.locks, id)
+				}
+				t.mu.Unlock()
+				m.Unlock()
+			}
+		}
+		// The entry was replaced while we waited for the lock; drop this
+		// mutex and retry with the current one.
+		t.mu.Unlock()
+		m.Unlock()
+	}
+}
+
 type tripUsecase struct {
 	tripRepo         repository.TripRepository
 	tripPointRepo    repository.TripPointRepository
 	vehicleRepo      repository.VehicleRepository
 	reminderRepo     repository.ServiceReminderRepository
 	reminderNotifier *ReminderNotifier
+	locks            *tripLocks
 }
 
 func NewTripUsecase(
@@ -41,6 +89,7 @@ func NewTripUsecase(
 		vehicleRepo:      vehicleRepo,
 		reminderRepo:     reminderRepo,
 		reminderNotifier: reminderNotifier,
+		locks:            newTripLocks(),
 	}
 }
 
@@ -160,6 +209,11 @@ func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models
 		return fmt.Errorf("invalid trip id: %w", err)
 	}
 
+	// Serialize per trip: concurrent WS messages for the same trip are
+	// processed in goroutines, so writes must be ordered.
+	unlock := u.locks.Lock(tid)
+	defer unlock()
+
 	trip, err := u.tripRepo.FindByID(tid)
 	if err != nil {
 		return err
@@ -182,8 +236,14 @@ func (u *tripUsecase) ProcessLocation(userID string, tripID string, point models
 		trip.StartLongitude = point.Longitude
 	}
 
-	trip.EndLatitude = &point.Latitude
-	trip.EndLongitude = &point.Longitude
+	// Anchor end coordinates to the latest recorded point so that messages
+	// processed out of order cannot move the end marker backwards.
+	endLat, endLon := point.Latitude, point.Longitude
+	if last, err := u.tripPointRepo.FindLastByTripID(tid); err == nil {
+		endLat, endLon = last.Latitude, last.Longitude
+	}
+	trip.EndLatitude = &endLat
+	trip.EndLongitude = &endLon
 
 	return u.tripRepo.Save(trip)
 }
@@ -203,6 +263,11 @@ func (u *tripUsecase) BatchLocations(userID string, tripID string, input []dto.B
 		return nil, fmt.Errorf("invalid location payload or empty array")
 	}
 
+	// Serialize per trip: batches may race with WS location writes and with
+	// trip finalization.
+	unlock := u.locks.Lock(tid)
+	defer unlock()
+
 	trip, err := u.tripRepo.FindByID(tid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -213,6 +278,10 @@ func (u *tripUsecase) BatchLocations(userID string, tripID string, input []dto.B
 
 	if trip.UserID != uid {
 		return nil, fmt.Errorf("trip not found")
+	}
+
+	if trip.Status != models.TripStatusOngoing {
+		return nil, fmt.Errorf("trip is not ongoing")
 	}
 
 	points := make([]models.TripPoint, len(input))
@@ -250,20 +319,22 @@ func (u *tripUsecase) BatchLocations(userID string, tripID string, input []dto.B
 		return nil, err
 	}
 
-	allPoints, err := u.tripPointRepo.FindAllByTripID(tid)
-	if err != nil {
-		return nil, err
+	// Derive start/end from the trip boundaries with two indexed lookups
+	// instead of reloading every point of the trip (O(N) per batch).
+	if first, err := u.tripPointRepo.FindFirstByTripID(tid); err == nil {
+		trip.StartLatitude = first.Latitude
+		trip.StartLongitude = first.Longitude
 	}
-	if len(allPoints) > 0 {
-		trip.StartLatitude = allPoints[0].Latitude
-		trip.StartLongitude = allPoints[0].Longitude
-		endLat := allPoints[len(allPoints)-1].Latitude
-		endLon := allPoints[len(allPoints)-1].Longitude
+
+	if last, err := u.tripPointRepo.FindLastByTripID(tid); err == nil {
+		endLat := last.Latitude
+		endLon := last.Longitude
 		trip.EndLatitude = &endLat
 		trip.EndLongitude = &endLon
-		if err := u.tripRepo.Save(trip); err != nil {
-			return nil, err
-		}
+	}
+
+	if err := u.tripRepo.Save(trip); err != nil {
+		return nil, err
 	}
 
 	return &dto.BatchLocationResponse{ProcessedCount: len(points), TripID: tid.String()}, nil
@@ -279,6 +350,12 @@ func (u *tripUsecase) EndTrip(userID string, tripID string) (*dto.TripResponse, 
 	if err != nil {
 		return nil, fmt.Errorf("invalid trip id: %w", err)
 	}
+
+	// Serialize with location writes: after the status flips to COMPLETED
+	// under this lock, in-flight location writes re-check the status and are
+	// rejected, so the computed metrics can never be stale.
+	unlock := u.locks.Lock(tid)
+	defer unlock()
 
 	trip, err := u.tripRepo.FindByID(tid)
 	if err != nil {

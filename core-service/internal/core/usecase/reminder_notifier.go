@@ -3,6 +3,7 @@ package usecase
 import (
 	"fmt"
 	"math"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -142,13 +143,58 @@ func (n *ReminderNotifier) ProcessAllActive(reminderRepo repository.ServiceRemin
 	}
 }
 
-func StartReminderScheduler(interval time.Duration, notifier *ReminderNotifier, reminderRepo repository.ServiceReminderRepository) {
+// ReminderScheduler periodically processes active reminders. It prevents
+// overlapping runs and can be stopped gracefully.
+type ReminderScheduler struct {
+	notifier     *ReminderNotifier
+	reminderRepo repository.ServiceReminderRepository
+	stopCh       chan struct{}
+	done         chan struct{}
+	running      atomic.Bool
+}
+
+func StartReminderScheduler(interval time.Duration, notifier *ReminderNotifier, reminderRepo repository.ServiceReminderRepository) *ReminderScheduler {
+	s := &ReminderScheduler{
+		notifier:     notifier,
+		reminderRepo: reminderRepo,
+		stopCh:       make(chan struct{}),
+		done:         make(chan struct{}),
+	}
+
 	go func() {
+		defer close(s.done)
+
 		ticker := time.NewTicker(interval)
-		for range ticker.C {
-			notifier.ProcessAllActive(reminderRepo)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-s.stopCh:
+				return
+			case <-ticker.C:
+				s.runOnce()
+			}
 		}
 	}()
+
+	return s
+}
+
+func (s *ReminderScheduler) runOnce() {
+	// Skip this tick if the previous run is still in progress so runs never
+	// overlap and send duplicate notifications.
+	if !s.running.CompareAndSwap(false, true) {
+		return
+	}
+	defer s.running.Store(false)
+
+	s.notifier.ProcessAllActive(s.reminderRepo)
+}
+
+// Stop halts the scheduler and waits for any in-flight run to finish.
+func (s *ReminderScheduler) Stop() {
+	close(s.stopCh)
+	<-s.done
 }
 
 func UpdateNotifiedAt(reminder *models.ServiceReminder, notifier *ReminderNotifier, reminderRepo repository.ServiceReminderRepository) {

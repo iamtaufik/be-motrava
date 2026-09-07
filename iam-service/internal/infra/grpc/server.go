@@ -28,6 +28,7 @@ type Server struct {
 	jwtSecret string
 	jwtIssuer string
 	log       *slog.Logger
+	srv       *grpc.Server
 }
 
 func NewServer(userRepo repository.UserRepository, jwtSecret, jwtIssuer string, logger *slog.Logger) *Server {
@@ -36,6 +37,7 @@ func NewServer(userRepo repository.UserRepository, jwtSecret, jwtIssuer string, 
 		jwtSecret: jwtSecret,
 		jwtIssuer: jwtIssuer,
 		log:       logger,
+		srv:       grpc.NewServer(),
 	}
 }
 
@@ -45,11 +47,26 @@ func (s *Server) Run(port string) error {
 		return fmt.Errorf("grpc listen: %w", err)
 	}
 
-	grpcServer := grpc.NewServer()
-	iamv1.RegisterIAMServiceServer(grpcServer, s)
+	iamv1.RegisterIAMServiceServer(s.srv, s)
 
 	s.log.Info("grpc server starting", "module", "grpc_server", "port", port)
-	return grpcServer.Serve(lis)
+	return s.srv.Serve(lis)
+}
+
+// GracefulStop stops accepting new RPCs and drains in-flight ones.
+func (s *Server) GracefulStop() {
+	if s.srv == nil {
+		return
+	}
+	s.srv.GracefulStop()
+}
+
+// Stop immediately terminates the server and all in-flight RPCs.
+func (s *Server) Stop() {
+	if s.srv == nil {
+		return
+	}
+	s.srv.Stop()
 }
 
 func (s *Server) ValidateToken(ctx context.Context, req *iamv1.ValidateTokenRequest) (*iamv1.ValidateTokenResponse, error) {

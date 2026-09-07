@@ -35,11 +35,11 @@ type Hub struct {
 }
 
 type Client struct {
-	hub    *Hub
-	TripID string
-	UserID string
-	Send   chan []byte
-	close  chan struct{}
+	hub       *Hub
+	TripID    string
+	UserID    string
+	Send      chan []byte
+	closeOnce sync.Once
 }
 
 func NewClient(hub *Hub, tripID, userID string) *Client {
@@ -49,6 +49,13 @@ func NewClient(hub *Hub, tripID, userID string) *Client {
 		UserID: userID,
 		Send:   make(chan []byte, 256),
 	}
+}
+
+// Close shuts down the client's send channel so the writer goroutine exits.
+func (c *Client) Close() {
+	c.closeOnce.Do(func() {
+		close(c.Send)
+	})
 }
 
 func NewHub(logger *slog.Logger, rdb *redis.Client, tripPointRepo repository.TripPointRepository) *Hub {
@@ -81,6 +88,11 @@ func (h *Hub) Unregister(client *Client) {
 			delete(h.connections, client.TripID)
 		}
 	}
+
+	// Safe under the write lock: BroadcastToTrip sends on Send while holding
+	// the read lock, so it can never race with the channel close.
+	client.Close()
+
 	h.log.Info("ws client disconnected", "module", "ws_hub", "trip_id", client.TripID, "user_id", client.UserID)
 }
 

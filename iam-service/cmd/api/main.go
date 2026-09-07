@@ -29,16 +29,24 @@ func main() {
 
 	appLogger.Info("iam service initialized", "module", "main")
 
+	serverErr := make(chan error, 1)
 	go func() {
-		if err := application.Run(); err != nil {
-			appLogger.Error("iam server stopped with error", "error", err, "module", "main")
-			os.Exit(1)
-		}
+		serverErr <- application.Run()
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			appLogger.Error("iam server stopped with error", "error", err, "module", "main")
+			os.Exit(1)
+		}
+		appLogger.Info("iam service shutdown complete", "module", "main")
+		return
+	case <-quit:
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -79,6 +79,20 @@ func (a *Application) Run() error {
 
 func (a *Application) Shutdown(ctx context.Context) error {
 	a.log.Info("shutting down iam service", "module", "iam_app")
+
+	stopped := make(chan struct{})
+	go func() {
+		a.grpcServer.GracefulStop()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+	case <-ctx.Done():
+		a.log.Warn("grpc graceful stop timed out, forcing stop", "module", "iam_app")
+		a.grpcServer.Stop()
+	}
+
 	if err := a.rdb.Close(); err != nil {
 		a.log.Error("redis close error", "module", "iam_app", "error", err)
 	}

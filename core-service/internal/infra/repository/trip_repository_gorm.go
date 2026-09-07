@@ -173,6 +173,14 @@ func (r *tripPointRepositoryGorm) FindAllByTripID(tripID uuid.UUID) ([]models.Tr
 	return points, nil
 }
 
+func (r *tripPointRepositoryGorm) FindFirstByTripID(tripID uuid.UUID) (*models.TripPoint, error) {
+	var point models.TripPoint
+	if err := r.db.Where("trip_id = ?", tripID).Order("recorded_at asc").First(&point).Error; err != nil {
+		return nil, err
+	}
+	return &point, nil
+}
+
 func (r *tripPointRepositoryGorm) FindLastByTripID(tripID uuid.UUID) (*models.TripPoint, error) {
 	var point models.TripPoint
 	if err := r.db.Where("trip_id = ?", tripID).Order("recorded_at desc").First(&point).Error; err != nil {

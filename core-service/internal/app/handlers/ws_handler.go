@@ -90,16 +90,23 @@ func (h *WSHandler) handleConnection(conn *websocket.Conn, userID uuid.UUID) {
 
 		switch msgType {
 		case "auth":
-			tripID, _ = raw["trip_id"].(string)
-			if tripID == "" {
+			newTripID, _ := raw["trip_id"].(string)
+			if newTripID == "" {
 				continue
 			}
 
+			if client != nil {
+				h.hub.Unregister(client)
+				client = nil
+			}
+
+			tripID = newTripID
 			client = wsInfra.NewClient(h.hub, tripID, userID.String())
 			h.hub.Register(client)
 
+			wsClient := client
 			go func() {
-				for data := range client.Send {
+				for data := range wsClient.Send {
 					if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 						h.log.Error("ws write error", "module", "ws_handler", "error", err)
 						return

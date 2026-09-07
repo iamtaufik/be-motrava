@@ -75,6 +75,9 @@ func (h *TripHandler) BatchLocations(c *fiber.Ctx) error {
 		if strings.Contains(msg, "trip not found") {
 			return response.Error(c, fiber.StatusNotFound, "Trip not found", nil)
 		}
+		if strings.Contains(msg, "not ongoing") {
+			return response.Error(c, fiber.StatusBadRequest, msg, nil)
+		}
 		if strings.Contains(msg, "invalid location payload") || strings.Contains(msg, "invalid trip id") {
 			return response.Error(c, fiber.StatusBadRequest, "Invalid location payload or empty array", nil)
 		}

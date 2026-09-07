@@ -50,3 +50,28 @@ func (r *refreshTokenRepositoryGorm) RevokeByHash(hash string) error {
 
 	return nil
 }
+
+func (r *refreshTokenRepositoryGorm) Rotate(oldHash string, newToken *models.RefreshToken) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&models.RefreshToken{}).
+			Where("token_hash = ? AND revoked_at IS NULL", oldHash).
+			Update("revoked_at", time.Now().UTC())
+		if result.Error != nil {
+			return result.Error
+		}
+
+		// Zero rows affected means the token was already revoked: refresh
+		// token reuse (e.g. a raced or replayed refresh request).
+		if result.RowsAffected == 0 {
+			return coreRepo.ErrRefreshTokenReuse
+		}
+
+		return tx.Create(newToken).Error
+	})
+	if err != nil {
+		r.log.Error("failed to rotate refresh token", "module", "refresh_token_repository", "error", err)
+		return err
+	}
+
+	return nil
+}

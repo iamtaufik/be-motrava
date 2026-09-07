@@ -22,6 +22,7 @@ type TripPointRepository interface {
 	Create(point *models.TripPoint) error
 	CreateBatch(points []models.TripPoint) error
 	FindAllByTripID(tripID uuid.UUID) ([]models.TripPoint, error)
+	FindFirstByTripID(tripID uuid.UUID) (*models.TripPoint, error)
 	FindLastByTripID(tripID uuid.UUID) (*models.TripPoint, error)
 	CountByTripID(tripID uuid.UUID) (int64, error)
 	DeleteByTripID(tripID uuid.UUID) error
